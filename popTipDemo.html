@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./popTip.js"></script>
+  <script src="./mousePosition.js"></script>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    ul li {
+      list-style: none;
+    }
+    body {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <button class="poptip-btn">popTip</button>
+  <button class="poptip-btn">popTip</button>
+  <button class="poptip-btn">popTip</button>
+  <script>
+    new mousePosition()
+
+    const popTipBtns = document.querySelectorAll('.poptip-btn')
+    console.log(popTipBtns)
+    let popTipHandler = null;
+    popTipBtns.forEach((val) => {
+      val.addEventListener('click', (e) => {
+        e.stopPropagation()
+        if (popTipHandler) {
+          popTipHandler.destroy()
+        }
+        popTipHandler = new popTip({
+          style: {},
+          placement: 'top',
+          content: 'hello pop tip',
+          offset: 0,
+          targetEl: val,
+          animateDuration: 1300,
+          delay: 0
+        })
+      })
+    })
+
+    document.body.addEventListener('click', (e)=>{
+      if (popTipHandler) {
+        popTipHandler.destroy()
+      }
+    })
+  </script>
+</body>
+</html>

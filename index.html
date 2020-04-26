@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./popTip.js"></script>
+  <script src="./mousePosition.js"></script>
+  <script src="./sbBoard.js"></script>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    ul li {
+      list-style: none;
+    }
+    .canvas {
+      user-select: none;
+      /* position: absolute; */
+    }
+    .tool-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1;
+      text-align:center;
+    }
+    .tools-list {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tools-list-item {
+      padding: 4px 8px;
+    }
+    body {
+      display: grid;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+    }
+    button{
+      border: 1px solid #345;
+      padding: 4px 8px;
+      font-size: 1rem;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="tool-bar">
+    <ul class="tools-list">
+      <!-- 清除 -->
+      <li class="tools-list-item">
+        <button id="clear">clear</button>
+      </li>
+      <!-- 缩小 -->
+      <li class="tools-list-item">
+        <button id="zoomOut">zoomOut</button>
+      </li>
+      <!-- 放大 -->
+      <li class="tools-list-item">
+        <button id="zoomIn">zoomIn</button>
+      </li>
+    </ul>
+  </div>
+  <script>
+    new mousePosition()
+
+    function bindEvent(btnId, cb) {
+      const restoreBtn = document.getElementById(btnId)
+      restoreBtn.addEventListener('click', (e)=>{
+        cb()
+      })
+    }
+
+    const _sbBoard = new sbBoard({
+      width: 800,
+      height: 800
+    })
+    _sbBoard.setDrawType('beeline')
+    document.body.appendChild(_sbBoard.getCanavasDom())
+
+    // let scaled = false;
+    // const scaleBtn = document.getElementById('scale')
+    // scaleBtn.addEventListener('click', (e)=>{
+    //   ctx.clearRect(0, 0, canvasWrap.width, canvasWrap.height);
+    //   if (!scaled) {
+    //     ctx.scale(2, 2);
+    //   } else {
+    //     ctx.scale(0.5, 0.5);
+    //   }
+    //   scaled = !scaled
+    // })
+
+    // const restoreBtn = document.getElementById('restore')
+    // restoreBtn.addEventListener('click', (e)=>{
+    //   console.log('restore button')
+    // })
+
+    bindEvent('clear', ()=>{
+      console.log('clear whole')
+      _sbBoard.clearWhole()
+    })
+    bindEvent('zoomIn', ()=>{
+      console.log('zoomIn')
+      _sbBoard.zoomIn()
+    })
+    bindEvent('zoomOut', ()=>{
+      console.log('zoomOut')
+      _sbBoard.zoomOut()
+    })
+  </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./mousePosition.js"></script>
+  <script src="./actionHistory.js"></script>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    ul li {
+      list-style: none;
+    }
+    .x-canvas {
+      position: absolute;
+    }
+    .tool-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1;
+      text-align:center;
+    }
+    .tools-list {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tools-list-item {
+      padding: 4px 8px;
+    }
+    button{
+      border: 1px solid #345;
+      padding: 4px 8px;
+      font-size: 1rem;
+      border-radius: 4px;
+    }
+    .list-item {
+      padding: 4px;
+      border-bottom: 1px solid #333;
+    }
+    #list {
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+<body>
+  <button id="revoke">revoke</button>
+  <button id="onward">onward</button>
+  <input type="text" id="input"/>
+  <ul id="list"></ul>
+  <script>
+    const idInput = document.getElementById('input')
+    const idList = document.getElementById('list')
+    const idRevoke = document.getElementById('revoke')
+    const idOnward = document.getElementById('onward')
+
+    const historyActions = new recordActionHistory({
+      historyArray: [
+          [
+            {
+              name: '10-1'
+            },
+            {
+              name: '10-2'
+            }
+          ]
+        ], // 操作记录的历史数据
+    })
+
+    function showoffHistory(list, data) {
+      const _fragment = document.createDocumentFragment()
+      data.forEach(item => {
+        const _li = document.createElement('li')
+        _li.innerText = JSON.stringify(item);
+        _li.className = 'list-item'
+        _fragment.appendChild(_li)
+      })
+      list.innerHTML = ''
+      list.appendChild(_fragment)
+      return list;
+    }
+    idInput.addEventListener('change', (e)=>{
+      let _data = []
+      if (idInput.value == 0) {
+        _data = [
+          {
+            name: '0-1'
+          },
+          {
+            name: '0-2'
+          }
+        ]
+      } else if (idInput.value == 1) {
+        _data = [
+          {
+            name: '1-1'
+          },
+          {
+            name: '1-2'
+          }
+        ]
+      } else if (idInput.value == 2) {
+        _data = [
+          {
+            name: '2-1'
+          },
+          {
+            name: '2-2'
+          }
+        ]
+      }
+      historyActions.recordChange(_data)
+      idInput.value = ''
+      showoffHistory(idList, historyActions.getHistoryArray())
+    })
+    idRevoke.addEventListener('click', (e)=>{
+      showoffHistory(idList, historyActions.revoke())
+    })
+
+    idOnward.addEventListener('click', (e)=>{
+      showoffHistory(idList, historyActions.onward())
+    })
+
+  </script>
+</body>
+</html>
