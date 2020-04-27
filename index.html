@@ -37,14 +37,14 @@
       padding: 4px 8px;
     }
     body {
-      display: grid;
+      /* display: grid;
       align-items: center;
       justify-content: center;
       position: absolute;
       width: 100%;
       height: 100%;
       top: 0;
-      left: 0;
+      left: 0; */
     }
     button{
       border: 1px solid #345;
@@ -57,6 +57,30 @@
 <body>
   <div class="tool-bar">
     <ul class="tools-list">
+      <!-- 指针 -->
+      <li class="tools-list-item">
+        <button id="pointer">pointer</button>
+      </li>
+      <!-- 多边形 -->
+      <li class="tools-list-item">
+        <button id="polygon">polygon</button>
+      </li>
+      <!-- 圆形 -->
+      <!-- <li class="tools-list-item">
+        <button id="circle">circle</button>
+      </li> -->
+      <!-- 线 -->
+      <li class="tools-list-item">
+        <button id="line">line</button>
+      </li>
+      <!-- 矩形 -->
+      <li class="tools-list-item">
+        <button id="rect">rect</button>
+      </li>
+      <!-- 设置图片 -->
+      <li class="tools-list-item">
+        <button id="setBg">setBg</button>
+      </li>
       <!-- 清除 -->
       <li class="tools-list-item">
         <button id="clear">clear</button>
@@ -82,11 +106,15 @@
     }
 
     const _sbBoard = new sbBoard({
-      width: 800,
-      height: 800
+      wrapStyle:{
+        position: 'absolute',
+      },
+      width: window.innerWidth,
+      height: window.innerHeight
     })
-    _sbBoard.setDrawType('beeline')
-    document.body.appendChild(_sbBoard.getCanavasDom())
+    _sbBoard.setDrawType('pointer')
+    
+    document.body.appendChild(_sbBoard.getWrapDom())
 
     // let scaled = false;
     // const scaleBtn = document.getElementById('scale')
@@ -117,6 +145,38 @@
       console.log('zoomOut')
       _sbBoard.zoomOut()
     })
+    bindEvent('line', ()=>{
+      console.log('line')
+      _sbBoard.setDrawType('line')
+    })
+    bindEvent('rect', ()=>{
+      console.log('rect')
+      _sbBoard.setDrawType('rect')
+    })
+    bindEvent('pointer', ()=>{
+      console.log('pointer')
+      _sbBoard.setDrawType('pointer')
+    })
+    bindEvent('polygon', ()=>{
+      console.log('polygon')
+      _sbBoard.setDrawType('polygon')
+    })
+    // bindEvent('circle', ()=>{
+    //   console.log('circle')
+    //   _sbBoard.setDrawType('circle')
+    // })
+    bindEvent('setBg', ()=>{
+      console.log('setBg')
+      _sbBoard.setBackgroundImage('./pcb_demo.jpg')
+    })
+    // const canvas = document.getElementById('canvas')
+    // const image = new Image();
+    // image.src = './pcb_demo.jpg';
+    // image.onload = () => {
+    //   canvas.width = image.naturalWidth
+    //   canvas.height = image.naturalHeight
+    //   canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
+    // }
   </script>
 </body>
 </html>
