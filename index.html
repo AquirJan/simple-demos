@@ -125,7 +125,7 @@
       height: window.innerHeight
     })
     _sbBoard.setDrawType('pointer')
-    // _sbBoard.setBackground({src:'./pcb_demo.jpg'})
+    _sbBoard.setBackground({src:'./pcb_demo.jpg'})
     document.body.appendChild(_sbBoard.getWrapDom())
 
     // let scaled = false;
@@ -189,6 +189,11 @@
     //   canvas.height = image.naturalHeight
     //   canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
     // }
+
+    // let aaa = [{"dx":907.2,"dy":452.4,"height":118.8,"id":"c43ae412-7580-482a-bcfc-f6be9121145d","type":"rect","width":168,"x":739.2,"y":333.6,"selected":false}]
+    // const bbb = aaa.slice(0, aaa.length) 
+    // bbb[0].dx = 0
+    // console.log(aaa, bbb)
   </script>
 </body>
 </html>
