@@ -109,11 +109,23 @@
       wrapStyle:{
         position: 'absolute',
       },
+      drawHistory: [
+        {
+          dx: 756,
+          dy: 377,
+          height: 99,
+          id: "c43ae412-7580-482a-bcfc-f6be9121145d",
+          type: "rect",
+          width: 140,
+          x: 616,
+          y: 278,
+        }
+      ],
       width: window.innerWidth,
       height: window.innerHeight
     })
     _sbBoard.setDrawType('pointer')
-    
+    // _sbBoard.setBackground({src:'./pcb_demo.jpg'})
     document.body.appendChild(_sbBoard.getWrapDom())
 
     // let scaled = false;
@@ -167,7 +179,7 @@
     // })
     bindEvent('setBg', ()=>{
       console.log('setBg')
-      _sbBoard.setBackgroundImage('./pcb_demo.jpg')
+      _sbBoard.setBackground({src:'./pcb_demo.jpg'})
     })
     // const canvas = document.getElementById('canvas')
     // const image = new Image();

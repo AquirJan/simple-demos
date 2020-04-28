@@ -10,20 +10,25 @@ class sbBoard {
     this.sbCtx = null;
     this.sbDom = null;
     this.sbWrap = null;
+    this.adjustSize = false;
     this.reInitHandler = null;
-    this.drawing = false;
+    this.pencilPressing = false; // 是否画笔按压状态
+    this.tinkerUp = null; // 是否处于调整尺寸状态
     this.moveTimeTtamp = 0;
     this.clickTimeLogs = [];
     this.bgObj = null;
-    this.pencilPosition = {
-      x: 0,
-      y: 0
-    }
+    this.pencilPosition = null;
+    // this.pencilOverPosition = {
+    //   x: 0,
+    //   y: 0
+    // };
     this.drawType = 'rect'; // rect, line, polygon
     this.tmpPolygon = null // 存放临时 polygon 对象用
+    this.tmpRect = null;
     this.imgData = null;
     this.zoomSize = 1;
-    this.drawRectsHistory = []
+    this.drawsHistory = []
+    this.controlDotsPath = []
     this.selectedDraw = null;
     this.fakepd = (e) => {
       this.pencilDown(e)
@@ -66,12 +71,13 @@ class sbBoard {
     this.sbDom.style.cssText = JSON.stringify(canvasDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbWrap.style.cssText = JSON.stringify(wrapDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbCtx = this.sbDom.getContext('2d')
-    this.sbCtx.strokeStyle = '#333'
-    this.sbCtx.lineWidth = 2
-    
     this.sbWrap.appendChild(this.sbDom)
+    this.drawsHistory = this.options.drawHistory;
 
-    this.drawRectsHistory = this.options.drawHistory;
+    this.sbDom.addEventListener('mousedown', this.fakepd, false)
+    this.sbDom.addEventListener('mousemove', this.fakepm, false)
+    this.sbDom.addEventListener('mouseup', this.fakepu, false)
+
     this.renderBoard()
     return this;
   }
@@ -87,14 +93,22 @@ class sbBoard {
   getWrapDom() {
     return this.sbWrap;
   }
-  // 设置背景图
-  async setBackgroundImage(src) {
-    this.bgObj = await this.asyncLoadImage(src)
-    this.renderBoard()
-  }
   // 获取画布ctx对象
   getCanavasCtx() {
     return this.sbCtx;
+  }
+  // 设置背景图
+  async setBackground(obj) {
+    const _obj = Object.assign({
+      color: '#878',
+      src: ''
+    }, obj)
+    if (_obj.src) {
+      this.bgObj = await this.asyncLoadImage(_obj.src)  
+    } else {
+      this.sbCtx.fillStyle = _obj.color
+    }
+    this.renderBoard()
   }
   // 保存整个画布数据
   saveImageData() {
@@ -134,7 +148,7 @@ class sbBoard {
     })
   }
   // 绘画背景图
-  async drawBackground() {
+  async drawBackgroundImage() {
     if (this.bgObj) {
       const { height, width } = this.calcImageSize()
       this.sbDom.width = width
@@ -146,9 +160,12 @@ class sbBoard {
   // 清除
   clearWhole(publicUse = true) {
     if (publicUse) {
-      this.drawRectsHistory = []
+      this.drawsHistory = []
+      this.selectedDraw = null;
+      this.bgObj = null;
     }
-    this.sbCtx.clearRect(0, 0, this.sbDom.width, this.sbDom.height)
+    this.sbCtx.fillStyle = '#878'
+    this.sbCtx.fillRect(0, 0, this.sbDom.width, this.sbDom.height)
   }
   // 放大
   zoomIn() {
@@ -167,70 +184,114 @@ class sbBoard {
   // 工具栏用方法end
   // 设置画图类型
   setDrawType(params) {
-    this.drawRectsHistory.forEach(val => {
+    this.drawsHistory.forEach(val => {
       val['selected'] = false;
     })
     this.drawType = params;
-    this.sbDom.addEventListener('mousedown', this.fakepd, false)
   }
-  // 设定当前画笔坐标
+  // 设定画笔点击坐标
   setPencilPosition(x, y) {
-    this.pencilPosition.x = x - this.sbDom.offsetLeft;
-    this.pencilPosition.y = y - this.sbDom.offsetTop;
+    this.pencilPosition = {
+      x: x,
+      y: y
+    }
   }
-  // 获取起点与终点尺寸
+  // 设置当前画笔悬停位置
+  // setPencilOverPosition(x, y) {
+  //   this.pencilOverPosition = {
+  //     x: x,
+  //     y: y
+  //   }
+  // }
+  // 获取起点与终点之间的尺寸
   getDeltaSize(x, y) {
-    return {width : x - this.sbDom.offsetLeft - this.pencilPosition.x, height: y - this.sbDom.offsetTop - this.pencilPosition.y};
+    return {width : x - this.pencilPosition.x, height: y - this.pencilPosition.y};
   }
-  // 获取终点坐标
-  getDeltaPosition(x, y) {
-    return {x : x - this.sbDom.offsetLeft, y: y - this.sbDom.offsetTop};
+  // 生成调整控点
+  generateAdjustmentDot(x, y) {
+    const circle = new Path2D();
+    circle.arc(x, y, 6, 0, 2*Math.PI);
+    return circle;
   }
-  // 调整控点
-  adjustmentDot(x, y) {
-    this.sbCtx.beginPath()
-    this.sbCtx.arc(x, y, 4, 0, 2*Math.PI);
-    this.sbCtx.closePath()
-    this.sbCtx.stroke();
+  // 保存选中的框框到临时对象
+  setSelectedDraw() {
+    this.selectedDraw = null;
+    for(let i=0;i<this.drawsHistory.length;i++) {
+      if (this.drawsHistory[i].selected) {
+        this.selectedDraw = {
+          data: JSON.parse(JSON.stringify(this.drawsHistory[i])),
+          // data: this.drawsHistory.slice(i, i+1),
+          index: i
+        }
+        break;
+      }
+    }
   }
   // 调整框框插件
   adjustmentAddon() {
-    const item = this.drawRectsHistory.find(val => {
-      return val.selected
-    })
-    if (!item) {
-      this.selectedDraw = null;
+    if (!this.selectedDraw) {
       return;
     }
-    this.selectedDraw = item
-    this.sbCtx.strokeStyle = 'red'
-    this.sbCtx.lineWidth = 2
-    if (item.type === 'line') {
-      this.adjustmentDot(item.x, item.y)
-      this.adjustmentDot(item.dx, item.dy)
-    } else {
-      this.adjustmentDot(item.x, item.y)
-      this.adjustmentDot(item.x, item.y+item.height)
-      this.adjustmentDot(item.x, item.y+item.height/2)
-      this.adjustmentDot(item.x+item.width, item.y)
-      this.adjustmentDot(item.x+item.width/2, item.y)
-      this.adjustmentDot(item.x+item.width, item.y+item.height)
-      this.adjustmentDot(item.x+item.width, item.y+item.height/2)
-      this.adjustmentDot(item.x+item.width/2, item.y+item.height)
-    }
+    
+    const item = this.drawsHistory[this.selectedDraw.index];
+    this.controlDotsPath = [
+      {
+        path: this.generateAdjustmentDot(item.x, item.y), 
+        cursor: 'nwse-resize',
+        code: 'tl',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x+item.width/2, item.y),
+        cursor: 'ns-resize',
+        code: 'tm',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x+item.width, item.y),
+        cursor: 'nesw-resize',
+        code: 'tr',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x+item.width, item.y+item.height/2),
+        cursor: 'ew-resize',
+        code: 'rm',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x+item.width, item.y+item.height),
+        cursor: 'nwse-resize',
+        code: 'br',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x+item.width/2, item.y+item.height),
+        cursor: 'ns-resize',
+        code: 'bm',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x, item.y+item.height),
+        cursor: 'nesw-resize',
+        code: 'bl',
+      },
+      {
+        path: this.generateAdjustmentDot(item.x, item.y+item.height/2),
+        cursor: 'ew-resize',
+        code: 'lm',
+      }
+    ]
+    this.sbCtx.fillStyle = '#2ac2e4';
+    this.controlDotsPath.forEach(val => {
+      this.sbCtx.fill(val.path);
+    })
   }
   initPencilStyle() {
     this.sbCtx.strokeStyle = '#333'
-    this.sbCtx.lineWidth = 2
+    this.sbCtx.lineWidth = 3
   }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
+    // 设置背景图
+    this.drawBackgroundImage()
     this.initPencilStyle()
-    this.sbCtx.fillStyle = '#878'
-    this.sbCtx.fillRect(0, 0, this.sbDom.width, this.sbDom.height)
-    this.drawBackground()
-    this.drawRectsHistory.forEach(val => {
+    this.drawsHistory.forEach(val => {
       switch (val.type) {
         case 'polygon':
           this.sbCtx.beginPath();
@@ -268,149 +329,280 @@ class sbBoard {
       this.sbCtx.stroke();
     }
     this.adjustmentAddon()
+    
   }
   // 画笔下笔事件方法
   pencilDown(e) {
-    this.sbDom.removeEventListener('mousemove', this.fakepm, false)
-    if (this.drawType === 'pointer') {
-      console.log('pointer down')
-      return;
+    switch (this.drawType) {
+      case "pointer":
+        this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(e.offsetX, e.offsetY)))
+        
+        if (this.selectedDraw) {
+          for(let i=0;i<this.controlDotsPath.length;i++) {
+            if (this.sbCtx.isPointInPath(this.controlDotsPath[i].path, e.offsetX, e.offsetY)) {
+              document.body.style.cursor = this.controlDotsPath[i].cursor;
+              this.tinkerUp = this.controlDotsPath[i].code;
+              break;
+            }
+          }
+        }
+        console.log(this.tinkerUp)
+        if (this.calcIsInsideDraw(e.offsetX, e.offsetY) || this.selectedDraw || this.tinkerUp) {
+          if (this.pencilPressing) {
+            return;
+          }
+          this.pencilPressing = true;
+          this.setPencilPosition(e.offsetX, e.offsetY)
+        }
+        
+        
+        this.renderBoard()
+        break;
+      case "rect":
+        if (this.pencilPressing) {
+          return;
+        }
+        this.pencilPressing = true;
+        this.setPencilPosition(e.offsetX, e.offsetY)
+        break;
     }
-    if (this.drawType === 'polygon') {
-      this.setPencilPosition(e.clientX, e.clientY)
-    } else {
-      if (this.drawing) {
-        return;
-      }
-      this.drawing = true;
-      this.setPencilPosition(e.clientX, e.clientY)
-
-      document.body.addEventListener('mouseleave', this.fakepu, false)
-    } 
-    document.body.addEventListener('mousemove', this.fakepm, false)
-    document.body.addEventListener('mouseup', this.fakepu, false)
-    
-    
   }
   // 画笔移动事件方法
   pencilMove(e) {
-    if (this.drawType === 'pointer') {
-      if (this.selectedDraw && this.calcMouseIsInsideSelectedDraw(e)) {
-        document.body.style.cursor = 'move'
-      } else {
-        document.body.style.cursor = 'default'
-      }
-      return;
-    }
-    if (this.tmpPolygon && this.drawType === 'polygon') {
-      this.renderBoard()
-      const _dp = this.getDeltaPosition(e.clientX, e.clientY)
-      const _ds = this.getDeltaSize(e.clientX, e.clientY)
-      this.sbCtx.beginPath()
-      
-      this.sbCtx.moveTo(this.pencilPosition.x, this.pencilPosition.y);
-      this.sbCtx.lineTo(_dp.x, _dp.y);
-      this.sbCtx.stroke()
-    } else {
-      if (!this.drawing) {
-        return;
-      }
-      this.renderBoard()
-      this.drawSomeOne({
-        x: e.clientX,
-        y: e.clientY
-      })
+    // this.setPencilOverPosition(e.offsetX, e.offsetY)
+    // console.log(this.drawType)
+    switch (this.drawType) {
+      case "pointer":
+        // console.log(this.pencilPressing)
+        if (!this.pencilPressing) {
+          if (!this.pencilPosition) {
+            document.body.style.cursor = this.calcIsOnDrawPath(e.offsetX, e.offsetY) || this.calcIsInsideDraw() ? 'move' : 'default'
+            if (this.selectedDraw) {
+              for(let i=0;i<this.controlDotsPath.length;i++) {
+                if (this.sbCtx.isPointInPath(this.controlDotsPath[i].path, e.offsetX, e.offsetY)) {
+                  document.body.style.cursor = this.controlDotsPath[i].cursor;
+                  break;
+                }
+              }
+            }
+          }
+        } else {
+          // console.log('pressing')
+          if (this.selectedDraw) {
+            // console.log(this.tinkerUp)
+            if (this.tinkerUp) {
+              // console.log('调整尺寸')
+              // 调整尺寸
+              const _sditem = this.selectedDraw.data;
+              const _ds = this.getDeltaSize(e.offsetX, e.offsetY)
+              let _item = this.drawsHistory[this.selectedDraw.index];
+              _item.selected = true;
+              
+              switch(this.tinkerUp) {
+                case "bm":
+                  _item.height = _sditem.height + _ds.height
+                  _item.dy = _sditem.dy + _ds.height
+                  break;
+                case "rm":
+                  _item.width = _sditem.width + _ds.width
+                  _item.dx = _sditem.dx + _ds.width
+                  break;
+                case "br":
+                  _item.height = _sditem.height + _ds.height
+                  _item.dy = _sditem.dy + _ds.height
+                  _item.width = _sditem.width + _ds.width
+                  _item.dx = _sditem.dx + _ds.width
+                  break;
+                case "tm":
+                  _item.height = _sditem.height - _ds.height
+                  _item.y = _sditem.y + _ds.height
+                  break;
+                case "lm":
+                  _item.width = _sditem.width - _ds.width
+                  _item.x = _sditem.x + _ds.width
+                  break;
+                case "tl":
+                  _item.height = _sditem.height - _ds.height
+                  _item.y = _sditem.y + _ds.height
+                  _item.width = _sditem.width - _ds.width
+                  _item.x = _sditem.x + _ds.width
+                  break;
+                case "tr":
+                  _item.width = _sditem.width + _ds.width
+                  _item.dx = _sditem.dx + _ds.width
+                  _item.height = _sditem.height - _ds.height
+                  _item.y = _sditem.y + _ds.height
+                  break;
+                case "bl":
+                  _item.height = _sditem.height + _ds.height
+                  _item.dy = _sditem.dy + _ds.height
+                  _item.width = _sditem.width - _ds.width
+                  _item.x = _sditem.x + _ds.width
+                  break;
+              }
+              // console.log(_item)
+            } else {
+              // 整体移动
+              const _sditem = this.selectedDraw.data;
+              const _ds = this.getDeltaSize(e.offsetX, e.offsetY)
+              let _item = this.drawsHistory[this.selectedDraw.index];
+              _item.selected = true;
+              _item.x = _sditem.x + _ds.width
+              _item.y = _sditem.y + _ds.height
+              _item.dx = _sditem.dx + _ds.width
+              _item.dy = _sditem.dy + _ds.height
+            }
+            
+            this.renderBoard()
+          }
+        }
+        
+        break;
+      case "polygon":
+        // console.log(this.pencilPosition)
+        // if (this.tmpPolygon && this.pencilPosition) {
+        //   this.renderBoard()
+        //   const _dp = this.getDestinationPosition(e.clientX, e.clientY)
+        //   const _ds = this.getDeltaSize(e.clientX, e.clientY)
+        //   this.sbCtx.beginPath()
+          
+        //   this.sbCtx.moveTo(this.pencilPosition.x, this.pencilPosition.y);
+        //   this.sbCtx.lineTo(_dp.x, _dp.y);
+        //   this.sbCtx.stroke()
+        // }
+        break;
+      case 'rect':
+        if (!this.pencilPressing) {
+          return;
+        }
+        this.renderBoard()
+        this.drawRect(e.offsetX, e.offsetY)
+        break;
     }
   }
   // 画笔收笔方法
   pencilUp(e) {
-    if (this.drawType === 'pointer') {
-      return;
-    }
-    if (this.drawType !== 'polygon') {
-      if (!this.drawing) {
-        return;
-      }
-      this.drawing = false;
-      const someOneRect = this.drawSomeOne({
-        x: e.clientX,
-        y: e.clientY
-      })
-      console.log(someOneRect)
-      if (someOneRect.width > 20 || someOneRect.height > 20)  {
-        // 记录已经画的rects
-        someOneRect['id'] = this.generateUUID()
-        someOneRect['selected'] = true
-        this.drawRectsHistory.push(someOneRect)
-      }
-      
-      this.renderBoard()
-      this.setDrawType('pointer')
-      document.body.removeEventListener('mousemove', this.fakepm, false)
-      document.body.removeEventListener('mouseup', this.fakepu, false)
-      document.body.removeEventListener('mouseleave', this.fakepu, false)
+    switch (this.drawType) {
+      case "pointer":
+        if (this.pencilPressing) {
+          if (this.selectedDraw) {
+            this.selectedDraw.data = JSON.parse(JSON.stringify(this.drawsHistory[this.selectedDraw.index]))
+            this.selectedDraw.data = this.finalRectAdjustment(this.selectedDraw.data)
+            this.drawsHistory[this.selectedDraw.index] = this.selectedDraw.data
+          }
+          
+          // this.selectedDraw['data'] = this.drawsHistory.slice(this.selectedDraw.index, this.selectedDraw.index+1)
+          this.pencilPressing = false;
+          this.tinkerUp = null;
+        }
+        
+        this.pencilPosition = null;
+        this.renderBoard()
+        
+        break;
+      case "rect":
+        
+        this.pencilPressing = false;
+        let someOneRect = this.drawRect(e.offsetX, e.offsetY)
+        
+        someOneRect = this.finalRectAdjustment(someOneRect)
 
-      this.sbDom.addEventListener('mousemove', this.fakepm, false)
-    } else {
-      if (!this.tmpPolygon) {
-        this.tmpPolygon = {
-          x: this.pencilPosition.x,
-          y: this.pencilPosition.y,
-          type: this.drawType,
-          id: this.generateUUID(),
-          closed: false
+        if (someOneRect.width > 20 || someOneRect.height > 20)  {
+          // 记录已经画的rects
+          someOneRect['id'] = this.generateUUID()
+          someOneRect['selected'] = true
+          this.drawsHistory.push(someOneRect)
+          this.setSelectedDraw()
         }
-      } else {
-        if (this.detectIsDBClick(e.timeStamp)) {
-          this.tmpPolygon['closed'] = true;
-          this.tmpPolygon.way.push({
-            x: this.tmpPolygon.x,
-            y: this.tmpPolygon.y
-          })
-          this.drawRectsHistory.push(this.tmpPolygon)
-          this.setDrawType('pointer')
-          this.tmpPolygon = null;
-          this.renderBoard()
-          document.body.removeEventListener('mousemove', this.fakepm, false)
-          document.body.removeEventListener('mouseup', this.fakepu, false)
-          document.body.removeEventListener('mouseleave', this.fakepu, false)
-          return;
-        }
-        const _dp = this.getDeltaPosition(e.clientX, e.clientY)
-        const _wayDot = {
-          x: _dp.x,
-          y: _dp.y
-        };
-        if (this.detectTwoPointClose(this.tmpPolygon, _wayDot)) {
-          this.tmpPolygon['closed'] = true;
-          this.drawRectsHistory.push(this.tmpPolygon)
-          this.tmpPolygon = null;
-          document.body.removeEventListener('mousemove', this.fakepm, false)
-          document.body.removeEventListener('mouseup', this.fakepu, false)
-          document.body.removeEventListener('mouseleave', this.fakepu, false)
-        } else {
-          this.tmpPolygon['way'] = this.tmpPolygon.way ? this.tmpPolygon['way'] : []
-          this.tmpPolygon['way'].push(_wayDot)
-        }
+        console.log(someOneRect)
+        this.renderBoard()
+        this.setDrawType('pointer')
+        this.pencilPosition = null;
+        break;
+      // case "polygon":
+        // if (!this.tmpPolygon) {
+        //   this.tmpPolygon = {
+        //     x: this.pencilPosition.x,
+        //     y: this.pencilPosition.y,
+        //     type: this.drawType,
+        //     id: this.generateUUID(),
+        //     closed: false
+        //   }
+        // } else {
+        //   if (this.detectIsDBClick(e.timeStamp)) {
+        //     this.tmpPolygon['closed'] = true;
+        //     this.tmpPolygon.way.push({
+        //       x: this.tmpPolygon.x,
+        //       y: this.tmpPolygon.y
+        //     })
+        //     this.drawsHistory.push(this.tmpPolygon)
+        //     this.setDrawType('pointer')
+        //     this.tmpPolygon = null;
+        //     this.renderBoard()
+        //     return;
+        //   }
+        //   const _dp = this.getDestinationPosition(e.clientX, e.clientY)
+        //   const _wayDot = {
+        //     x: _dp.x,
+        //     y: _dp.y
+        //   };
+        //   if (this.detectTwoPointClose(this.tmpPolygon, _wayDot)) {
+        //     this.tmpPolygon['closed'] = true;
+        //     this.drawsHistory.push(this.tmpPolygon)
+        //     this.tmpPolygon = null;
+        //   } else {
+        //     this.tmpPolygon['way'] = this.tmpPolygon.way ? this.tmpPolygon['way'] : []
+        //     this.tmpPolygon['way'].push(_wayDot)
+        //   }
+        // }
+        // break;
+    }
+    
+  }
+  // 矩形最终调整数据修正
+  finalRectAdjustment(someOneRect) {
+    someOneRect['width'] = Math.abs(someOneRect.width)
+    someOneRect['height'] = Math.abs(someOneRect.height)
+    someOneRect['x'] = someOneRect.x > someOneRect.dx ? someOneRect.dx : someOneRect.x
+    someOneRect['y'] = someOneRect.y > someOneRect.dy ? someOneRect.dy : someOneRect.y
+    someOneRect['dx'] = someOneRect.x > someOneRect.dx ? someOneRect.x : someOneRect.dx
+    someOneRect['dy'] = someOneRect.y > someOneRect.dy ? someOneRect.y : someOneRect.dy
+    return someOneRect;
+  }
+  // 计算画笔是否在某个画图上
+  calcIsOnDrawPath(x, y) {
+    let _flag = null;
+    for(let i=0;i<this.drawsHistory.length;i++) {
+      const _item = this.drawsHistory[i];
+      switch(_item.type) {
+        case "rect":
+          const _tmpRect = new Path2D()
+          _tmpRect.rect(_item.x, _item.y, _item.width, _item.height)
+          if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
+            _flag = {
+              data: _item,
+              // data: this.drawsHistory.slice(i, i+1),
+              index: i
+            }
+          }
+          break;
+      }
+      if (_flag) {
+        break;
       }
     }
+    return _flag;
   }
-  calcMouseIsInsideSelectedDraw(e) {
+  // 计算画笔是否在已选中的画图上
+  calcIsInsideDraw(x, y) {
     let _final = false;
-    if (this.selectedDraw && e) {
-      switch(this.selectedDraw.type) {
+    if (this.selectedDraw) {
+      const _item = this.selectedDraw.data;
+      switch(_item.type) {
         case "rect":
-          const cx = e.clientX - this.sbDom.offsetLeft;
-          const cy = e.clientY - this.sbDom.offsetTop;
-          let flagX = false;
-          let flagY = false;
-          if (cx >= this.selectedDraw.x && cx <= this.selectedDraw.dx) {
-            flagX = true;
-          }
-          if (cy >= this.selectedDraw.y && cy <= this.selectedDraw.dy) {
-            flagY = true;
-          }
-          _final = flagX && flagY;
+          const _tmpRect = new Path2D()
+          _tmpRect.rect(_item.x, _item.y, _item.width, _item.height)
+          _final = this.sbCtx.isPointInPath(_tmpRect, x, y)
           break;
       }
     }
@@ -473,33 +665,18 @@ class sbBoard {
       return false;
     }
   }
-  // 绘画线和矩形
-  drawSomeOne(currentPoint={x:0,y:0}, drawType) {
-    const _dt = drawType || this.drawType;
-    const _dp = this.getDeltaPosition(currentPoint.x, currentPoint.y)
-    const _ds = this.getDeltaSize(currentPoint.x, currentPoint.y)
-    switch(_dt) {
-      case 'line':
-        this.sbCtx.beginPath();
-        this.sbCtx.moveTo(this.pencilPosition.x, this.pencilPosition.y);
-        this.sbCtx.lineTo(_dp.x, _dp.y);
-        this.sbCtx.stroke();
-        break;
-      case 'rect':
-      default:
-        this.sbCtx.strokeRect(this.pencilPosition.x, this.pencilPosition.y, _ds.width, _ds.height);
-    }
+  // 绘画矩形
+  drawRect(cx, cy) {
+    const _ds = this.getDeltaSize(cx, cy)
+    this.sbCtx.strokeRect(this.pencilPosition.x, this.pencilPosition.y, _ds.width, _ds.height);
     return {
       x: this.pencilPosition.x,
       y: this.pencilPosition.y,
-      dx: _dp.x,
-      dy: _dp.y,
-      // way: [],
+      dx: cx,
+      dy: cy,
       width: _ds.width,
       height: _ds.height,
-      type: this.drawType,
-      // selected: false,
-      // closed: false
+      type: 'rect',
     }
   }
 }
