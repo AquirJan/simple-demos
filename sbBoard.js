@@ -27,6 +27,7 @@ class sbBoard {
     this.originDraws = []
     this.controlDotsPath = []
     this.selectedDraw = null;
+    this.spaceBar = false;
     return this.init()
   }
   // 初始化
@@ -66,7 +67,8 @@ class sbBoard {
     this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
     this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
     this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
-    window.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
+    this.sbDom.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
+    this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
 
     this.renderBoard()
     return this;
@@ -140,7 +142,7 @@ class sbBoard {
   // 绘画背景图
   async drawBackgroundImage() {
     if (this.bgObj) {
-      this.sbCtx.drawImage(this.bgObj.data, 0, 0, this.bgObj.viewWidth, this.bgObj.viewHeight)
+      this.sbCtx.drawImage(this.bgObj.data, 0, 0, Math.round(this.bgObj.width*this.zoomSize), Math.round(this.bgObj.height*this.zoomSize))
     }
   }
   // 工具栏用方法
@@ -157,25 +159,27 @@ class sbBoard {
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
-  calcCurrentZoomSize(size, plusMinus=true, step=0.1, min=0.2, max=2) {
+  calcCurrentZoomSize(size, plusMinus=true, step=0.010, min=0.2, max=2) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
       return null;
     }
     size = plusMinus ? size + step : size - step
-    return Math.max(min, Math.min(parseFloat(size.toFixed(2)), max));
+    return Math.max(min, Math.min(parseFloat(size.toFixed(3)), max));
   }
   // 还原缩放
   zoomReset() {
     this.zoomSize = this.bgObj.scaled;
   }
   // 放大
-  zoomIn() {
-    this.zoomSize = this.calcCurrentZoomSize(this.zoomSize)
+  zoomIn(step=0.1) {
+    this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
+    console.log(this.zoomSize)
   }
   // 缩小
-  zoomOut() {
-    this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false)
+  zoomOut(step=0.1) {
+    this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false, step)
+    console.log(this.zoomSize)
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -300,31 +304,11 @@ class sbBoard {
   renderBoard() {
     this.clearWhole(false)
     // 设置背景图
-    // if (this.zoomSize === 0.8) {
-      this.drawBackgroundImage()
-    // }
-    // this.clearWhole(false)
+    this.drawBackgroundImage()
+    // console.log(this.originDraws)
     this.initPencilStyle()
     this.originDraws.forEach(val => {
       switch (val.type) {
-        // case 'polygon':
-        //   this.sbCtx.beginPath();
-        //   this.sbCtx.moveTo(val.x, val.y);
-        //   if (val.way) {
-        //     val.way.forEach(wval => {
-        //       this.sbCtx.lineTo(wval.x, wval.y);
-        //     })
-        //   }
-        //   this.sbCtx.lineTo(val.dx, val.dy);
-        //   this.sbCtx.closePath();
-        //   this.sbCtx.stroke();
-        //   break;
-        // case 'line':
-        //   this.sbCtx.beginPath();
-        //   this.sbCtx.moveTo(val.x, val.y);
-        //   this.sbCtx.lineTo(val.dx, val.dy);
-        //   this.sbCtx.stroke();
-        //   break;
         case 'rect':
           this.sbCtx.strokeRect(
             this.normalFloat(val.x*this.zoomSize),
@@ -339,28 +323,31 @@ class sbBoard {
     if (this.tmpRect) {
       this.sbCtx.stroke(this.tmpRect)
     }
-    
-    // if (this.tmpPolygon) {
-    //   this.sbCtx.beginPath();
-    //   this.sbCtx.moveTo(this.tmpPolygon.x, this.tmpPolygon.y);
-    //   if (this.tmpPolygon.way) {
-    //     this.tmpPolygon.way.forEach(wval => {
-    //       this.sbCtx.lineTo(wval.x, wval.y);
-    //     })
-    //   }
-    //   this.sbCtx.lineTo(this.tmpPolygon.dx, this.tmpPolygon.dy);
-    //   this.sbCtx.stroke();
-    // }
     this.adjustmentAddon()
     window.requestAnimationFrame(()=>this.renderBoard())
+  }
+  sbDomWheel(e) {
+    const _wheelDelta = e.wheelDelta;
+    if (e.ctrlKey && Math.abs(_wheelDelta) > 0) {
+      if (_wheelDelta<0) {
+        this.zoomIn(0.010)
+      } else {
+        this.zoomOut(0.010)
+      }
+    }
+    e.preventDefault()
+    e.stopPropagation()
   }
   sbDomKeydown(e) {
     const keycode = e.keyCode;
     console.log(keycode)
-    console.log(this.selectedDraw)
     if (this.selectedDraw) {
       const _item = this.originDraws[this.selectedDraw.index]
       switch(keycode) {
+        case 17:
+          e.preventDefault()
+          e.stopPropagation()
+          break;
         case 37:
           // 左
           _item['x'] = _item.x - this.normalFloat(1/this.zoomSize)
@@ -378,7 +365,9 @@ class sbBoard {
           _item['y'] = _item.y + this.normalFloat(1/this.zoomSize)
           break;
       }
+      this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
     }
+    
   }
   // 画笔下笔事件方法
   pencilDown(e) {
