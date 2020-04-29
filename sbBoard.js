@@ -17,7 +17,11 @@ class sbBoard {
     this.pencilPressing = false; // 是否画笔按压状态
     this.tinkerUp = null; // 是否处于调整尺寸状态
     this.clickTimeLogs = [];
-    this.DragOffset = {
+    this.dragOffset = {
+      x: 0,
+      y: 0
+    }
+    this.dragDownPoint = {
       x: 0,
       y: 0
     }
@@ -294,22 +298,22 @@ class sbBoard {
     this.originDraws = data 
   }
   reinitDragOffset() {
-    if (this.DragOffset.x!==0) {
+    if (this.dragOffset.x!==0) {
       const _reinitX = setInterval(()=>{
-        if (this.DragOffset.x <=0 ) {
-          this.DragOffset.x = 0
+        if (this.dragOffset.x <=0 ) {
+          this.dragOffset.x = 0
           window.clearInterval(_reinitX)
         }
-        this.DragOffset.x = this.DragOffset.x - 10
+        this.dragOffset.x = this.dragOffset.x - 10
       }, 30)
     }
-    if (this.DragOffset.y!==0) {
+    if (this.dragOffset.y!==0) {
       const _reinitY = setInterval(()=>{
-        if (this.DragOffset.y <=0 ) {
-          this.DragOffset.y = 0
+        if (this.dragOffset.y <=0 ) {
+          this.dragOffset.y = 0
           window.clearInterval(_reinitY)
         }
-        this.DragOffset.y = this.DragOffset.y - 10
+        this.dragOffset.y = this.dragOffset.y - 10
       }, 30)
     }
   }
@@ -321,15 +325,15 @@ class sbBoard {
     //   this.reinitDragOffset()
     // }
     
-    this.drawBackgroundImage(this.DragOffset.x, this.DragOffset.y)
+    this.drawBackgroundImage(this.dragOffset.x, this.dragOffset.y)
     // console.log(this.originDraws)
     this.initPencilStyle()
     this.originDraws.forEach(val => {
       switch (val.type) {
         case 'rect':
           this.sbCtx.strokeRect(
-            this.normalFloat(val.x*this.zoomSize)+this.DragOffset.x,
-            this.normalFloat(val.y*this.zoomSize)+this.DragOffset.y,
+            this.normalFloat(val.x*this.zoomSize)+this.dragOffset.x,
+            this.normalFloat(val.y*this.zoomSize)+this.dragOffset.y,
             this.normalFloat(val.width*this.zoomSize),
             this.normalFloat(val.height*this.zoomSize)
           );
@@ -423,8 +427,11 @@ class sbBoard {
     if (this.spaceBar) {
       this.selectedDraw = null;
       this.pencilPressing = true;
-      this.DragOffset['x'] = e.offsetX-this.DragOffset.x
-      this.DragOffset['y'] = e.offsetY-this.DragOffset.y
+      this.dragDownPoint = {
+        x: e.offsetX - this.dragOffset.x,
+        y: e.offsetY - this.dragOffset.y
+      }
+      
       return;
     }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
@@ -469,8 +476,8 @@ class sbBoard {
   // 画笔移动事件方法
   pencilMove(e) {
     if (this.spaceBar && this.pencilPressing) {
-      this.DragOffset['x'] = e.offsetX-this.DragOffset.x
-      this.DragOffset['y'] = e.offsetY-this.DragOffset.y
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
       return;
     }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
@@ -564,8 +571,8 @@ class sbBoard {
   // 画笔收笔方法
   pencilUp(e) {
     if (this.pencilPressing) {
-      this.DragOffset['x'] = e.offsetX-this.DragOffset.x
-      this.DragOffset['y'] = e.offsetY-this.DragOffset.y
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
 
       this.pencilPressing = false;
       return;
