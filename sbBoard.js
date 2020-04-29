@@ -36,6 +36,7 @@ class sbBoard {
     this.controlDotsPath = []
     this.selectedDraw = null;
     this.spaceBar = false;
+    this.draging = false;
     return this.init()
   }
   // 初始化
@@ -324,7 +325,6 @@ class sbBoard {
     // if (!this.spaceBar) {
     //   this.reinitDragOffset()
     // }
-    
     this.drawBackgroundImage(this.dragOffset.x, this.dragOffset.y)
     // console.log(this.originDraws)
     this.initPencilStyle()
@@ -424,21 +424,21 @@ class sbBoard {
   }
   // 画笔下笔事件方法
   pencilDown(e) {
-    if (this.spaceBar) {
+    if (this.spaceBar && !this.draging) {
       this.selectedDraw = null;
       this.pencilPressing = true;
+      this.draging = true;
       this.dragDownPoint = {
         x: e.offsetX - this.dragOffset.x,
         y: e.offsetY - this.dragOffset.y
       }
-      
       return;
     }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
     const pointY = this.normalFloat(e.offsetY/this.zoomSize)
+    console.log(this.drawType)
     switch (this.drawType) {
       case "pointer":
-        
         if (this.selectedDraw) {
           const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(pointX, pointY)))
           if (_item && this.selectedDraw.data.id !== _item.data.id) {
@@ -475,7 +475,7 @@ class sbBoard {
   }
   // 画笔移动事件方法
   pencilMove(e) {
-    if (this.spaceBar && this.pencilPressing) {
+    if (this.spaceBar && this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
       return;
@@ -570,10 +570,10 @@ class sbBoard {
   }
   // 画笔收笔方法
   pencilUp(e) {
-    if (this.pencilPressing) {
+    if (this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
-
+      this.draging = false;
       this.pencilPressing = false;
       return;
     }
