@@ -106,7 +106,12 @@ class sbBoard {
       src: ''
     }, obj)
     if (_obj.src) {
-      this.bgObj = await this.asyncLoadImage(_obj.src)  
+      this.bgObj = await this.asyncLoadImage(_obj.src)
+      if (this.bgObj.success) {
+        
+        this.sbDom.width = this.bgObj.viewWidth
+        this.sbDom.height = this.bgObj.viewHeight
+      }
     } else {
       this.sbCtx.fillStyle = _obj.color
     }
@@ -133,10 +138,13 @@ class sbBoard {
       const image = new Image();
       image.src = src;
       image.onload = () => {
+        const { height, width } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
         resolve({
           success: true,
           msg: 'load image complite',
           data: image,
+          viewWidth: width,
+          viewHeight: height,
           width: image.naturalWidth,
           height: image.naturalHeight,
         })
@@ -152,10 +160,7 @@ class sbBoard {
   // 绘画背景图
   async drawBackgroundImage() {
     if (this.bgObj) {
-      const { height, width } = this.calcImageSize()
-      this.sbDom.width = width
-      this.sbDom.height = height
-      this.sbCtx.drawImage(this.bgObj.data, 0, 0, this.sbDom.width, this.sbDom.height)
+      this.sbCtx.drawImage(this.bgObj.data, 0, 0, this.bgObj.viewWidth, this.bgObj.viewHeight)
     }
   }
   // 工具栏用方法
@@ -166,27 +171,39 @@ class sbBoard {
       this.selectedDraw = null;
       this.bgObj = null;
     }
-    this.sbCtx.fillStyle = '#878'
-    this.sbCtx.fillRect(0, 0, this.sbDom.width, this.sbDom.height)
+    this.sbCtx.fillStyle = '#fff'
+    this.sbCtx.fillRect(-5, -5, this.sbDom.width*1.2, this.sbDom.height*1.2)
   }
   normalFloat(floatNumber=0, fixed=1) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
+  calcCurrentZoomSize(size, plusMinus=true, step=0.2, min=0.2, max=2.1) {
+    if (isNaN(size)) {
+      console.warn('size param is not a number')
+      return null;
+    }
+    size = plusMinus ? size + step : size - step
+    return Math.max(min, Math.min(parseFloat(size.toFixed(2)), max));
+  }
   // 放大
   zoomIn() {
-    this.zoomSize = this.zoomSize + 0.1
-    this.zoomSize = Math.max(0.6, Math.min(parseFloat(this.zoomSize.toFixed(1)), 1.2));
+    this.zoomSize = this.calcCurrentZoomSize(this.zoomSize)
     console.log(this.zoomSize)
-    this.sbCtx.scale(1.01, 1.01);
-    this.renderBoard()
+    if (this.zoomSize < 2.1) {
+      this.sbCtx.scale(1.01, 1.01);
+      this.renderBoard()
+    }
+    
   }
   // 缩小
   zoomOut() {
-    this.zoomSize = this.zoomSize - 0.1
-    this.zoomSize = Math.max(0.8, Math.min(parseFloat(this.zoomSize.toFixed(1)), 1.2));
+    this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false)
     console.log(this.zoomSize)
-    this.sbCtx.scale(1/1.01, 1/1.01);
-    this.renderBoard()
+    if (this.zoomSize > 0.2) {
+      this.sbCtx.scale(1/1.01, 1/1.01);
+      this.renderBoard()
+    }
+    
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -197,7 +214,13 @@ class sbBoard {
     this.drawType = params;
   }
   // 设定画笔点击坐标
-  setPencilPosition(x, y) {
+  setPencilPosition(x, y, e) {
+    console.log(e)
+    const circle = new Path2D();
+    circle.arc(x, y, 2, 0, 2*Math.PI);
+    this.sbCtx.fillStyle='red'
+    this.sbCtx.fill(circle)
+
     this.pencilPosition = {
       x: x,
       y: y
@@ -292,7 +315,10 @@ class sbBoard {
   renderBoard() {
     this.clearWhole(false)
     // 设置背景图
-    // this.drawBackgroundImage()
+    // if (this.zoomSize === 0.8) {
+      this.drawBackgroundImage()
+    // }
+    // this.clearWhole(false)
     this.initPencilStyle()
     this.originDraws.forEach(val => {
       switch (val.type) {
@@ -374,13 +400,13 @@ class sbBoard {
           return;
         }
         this.pencilPressing = true;
-        this.setPencilPosition(e.offsetX, e.offsetY)
+        this.setPencilPosition(e.offsetX, e.offsetY, e)
         break;
     }
   }
   // 画笔移动事件方法
   pencilMove(e) {
-    // this.setPencilOverPosition(e.offsetX, e.offsetY)
+    return;
     // console.log(this.drawType)
     switch (this.drawType) {
       case "pointer":
@@ -490,6 +516,7 @@ class sbBoard {
   }
   // 画笔收笔方法
   pencilUp(e) {
+    return;
     switch (this.drawType) {
       case "pointer":
         if (this.pencilPressing) {
@@ -641,18 +668,24 @@ class sbBoard {
     return _final;
   }
   // 计算图片显示宽高
-  calcImageSize() {
+  calcImageSize(width, height) {
     let _obj = {
       width: 0,
-      height: 0
+      height: 0,
+      offsetX: 0,
+      offsetY: 0
     }
-    if (this.bgObj) {
-      _obj.width = Math.round(this.bgObj.width * (this.sbDom.height/this.bgObj.height))
+    if (width && height) {
+      _obj.width = Math.round(width * (this.sbDom.height/height))
       if (_obj.width > this.sbDom.width) {
         _obj.width = this.sbDom.width
-        _obj.height = Math.round(this.bgObj.height * (this.sbDom.width/this.bgObj.width))
+        _obj.height = Math.round(height * (this.sbDom.width/width))
+        _obj.offsetX = 0;
+        _obj.offsetY = parseFloat(((this.sbDom.height - _obj.height)/2).toFixed(1))
       } else {
         _obj.height = this.sbDom.height
+        _obj.offsetY = 0;
+        _obj.offsetX = parseFloat(((this.sbDom.width - _obj.width)/2).toFixed(1))
       }
     }
     return _obj
