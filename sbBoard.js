@@ -17,6 +17,10 @@ class sbBoard {
     this.pencilPressing = false; // 是否画笔按压状态
     this.tinkerUp = null; // 是否处于调整尺寸状态
     this.clickTimeLogs = [];
+    this.DragOffset = {
+      x: 0,
+      y: 0
+    }
     this.tmpRect = null;
     this.bgObj = null;
     this.pencilPosition = null;
@@ -68,8 +72,8 @@ class sbBoard {
     this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
     this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
     this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
-    window.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
-    window.addEventListener('keydown', (e)=>this.sbDomKeyup(e), false)
+    document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
+    document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
 
     this.renderBoard()
@@ -108,7 +112,6 @@ class sbBoard {
       this.sbCtx.fillStyle = _obj.color
       this.zoomSize = 1;
     }
-    // this.renderBoard()
   }
   // 加载图promise
   asyncLoadImage(src) {
@@ -143,9 +146,9 @@ class sbBoard {
     })
   }
   // 绘画背景图
-  async drawBackgroundImage() {
+  async drawBackgroundImage(offsetX=0, offsetY=0) {
     if (this.bgObj) {
-      this.sbCtx.drawImage(this.bgObj.data, 0, 0, Math.round(this.bgObj.width*this.zoomSize), Math.round(this.bgObj.height*this.zoomSize))
+      this.sbCtx.drawImage(this.bgObj.data, offsetX, offsetY, Math.round(this.bgObj.width*this.zoomSize), Math.round(this.bgObj.height*this.zoomSize))
     }
   }
   // 工具栏用方法
@@ -193,8 +196,8 @@ class sbBoard {
   // 设定画笔点击坐标
   setPencilPosition(x, y) {
     this.pencilPosition = {
-      x: x,
-      y: y
+      x,
+      y
     }
   }
   // 获取框框数据
@@ -290,19 +293,43 @@ class sbBoard {
   setDrawsData(data) {
     this.originDraws = data 
   }
+  reinitDragOffset() {
+    if (this.DragOffset.x!==0) {
+      const _reinitX = setInterval(()=>{
+        if (this.DragOffset.x <=0 ) {
+          this.DragOffset.x = 0
+          window.clearInterval(_reinitX)
+        }
+        this.DragOffset.x = this.DragOffset.x - 10
+      }, 30)
+    }
+    if (this.DragOffset.y!==0) {
+      const _reinitY = setInterval(()=>{
+        if (this.DragOffset.y <=0 ) {
+          this.DragOffset.y = 0
+          window.clearInterval(_reinitY)
+        }
+        this.DragOffset.y = this.DragOffset.y - 10
+      }, 30)
+    }
+  }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
     // 设置背景图
-    this.drawBackgroundImage()
+    // if (!this.spaceBar) {
+    //   this.reinitDragOffset()
+    // }
+    
+    this.drawBackgroundImage(this.DragOffset.x, this.DragOffset.y)
     // console.log(this.originDraws)
     this.initPencilStyle()
     this.originDraws.forEach(val => {
       switch (val.type) {
         case 'rect':
           this.sbCtx.strokeRect(
-            this.normalFloat(val.x*this.zoomSize),
-            this.normalFloat(val.y*this.zoomSize),
+            this.normalFloat(val.x*this.zoomSize)+this.DragOffset.x,
+            this.normalFloat(val.y*this.zoomSize)+this.DragOffset.y,
             this.normalFloat(val.width*this.zoomSize),
             this.normalFloat(val.height*this.zoomSize)
           );
@@ -310,11 +337,13 @@ class sbBoard {
         default:
       }
     })
+    // 临时矩形
     if (this.tmpRect) {
       this.sbCtx.stroke(this.tmpRect)
     }
     this.adjustmentAddon()
     window.requestAnimationFrame(()=>this.renderBoard())
+    
   }
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
@@ -391,6 +420,13 @@ class sbBoard {
   }
   // 画笔下笔事件方法
   pencilDown(e) {
+    if (this.spaceBar) {
+      this.selectedDraw = null;
+      this.pencilPressing = true;
+      this.DragOffset['x'] = e.offsetX-this.DragOffset.x
+      this.DragOffset['y'] = e.offsetY-this.DragOffset.y
+      return;
+    }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
     const pointY = this.normalFloat(e.offsetY/this.zoomSize)
     switch (this.drawType) {
@@ -432,6 +468,11 @@ class sbBoard {
   }
   // 画笔移动事件方法
   pencilMove(e) {
+    if (this.spaceBar && this.pencilPressing) {
+      this.DragOffset['x'] = e.offsetX-this.DragOffset.x
+      this.DragOffset['y'] = e.offsetY-this.DragOffset.y
+      return;
+    }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
     const pointY = this.normalFloat(e.offsetY/this.zoomSize)
     switch (this.drawType) {
@@ -522,6 +563,13 @@ class sbBoard {
   }
   // 画笔收笔方法
   pencilUp(e) {
+    if (this.pencilPressing) {
+      this.DragOffset['x'] = e.offsetX-this.DragOffset.x
+      this.DragOffset['y'] = e.offsetY-this.DragOffset.y
+
+      this.pencilPressing = false;
+      return;
+    }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
     const pointY = this.normalFloat(e.offsetY/this.zoomSize)
     switch (this.drawType) {
