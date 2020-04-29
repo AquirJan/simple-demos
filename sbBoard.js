@@ -14,33 +14,18 @@ class sbBoard {
     this.sbCtx = null;
     this.sbDom = null;
     this.sbWrap = null;
-    this.adjustSize = false;
-    this.reInitHandler = null;
     this.pencilPressing = false; // 是否画笔按压状态
     this.tinkerUp = null; // 是否处于调整尺寸状态
-    this.moveTimeTtamp = 0;
     this.clickTimeLogs = [];
     this.bgObj = null;
     this.pencilPosition = null;
-    this.scaleStep = 0.4;
-    this.drawType = 'rect'; // rect, line, polygon
+    this.btnScaleStep = 0.4;
+    this.drawType = 'pointer'; // rect, line, polygon
     this.tmpPolygon = null // 存放临时 polygon 对象用
-    this.tmpRect = null;
-    this.imgData = null;
     this.zoomSize = 1;
     this.originDraws = []
-    this.fakeDraws = []
     this.controlDotsPath = []
     this.selectedDraw = null;
-    this.fakepd = (e) => {
-      this.pencilDown(e)
-    }
-    this.fakepm = (e) => {
-      this.pencilMove(e)
-    }
-    this.fakepu = (e) => {
-      this.pencilUp(e)
-    }
     return this.init()
   }
   // 初始化
@@ -59,6 +44,7 @@ class sbBoard {
     }
     let canvasDefaultStyle = {
       'user-select': 'none',
+      'overflow': 'auto'
     }
     if (this.options.wrapStyle.constructor === Object) {
       wrapDefaultStyle = Object.assign(wrapDefaultStyle, this.options.wrapStyle)
@@ -76,9 +62,9 @@ class sbBoard {
     this.sbWrap.appendChild(this.sbDom)
     this.originDraws = this.options.drawHistory;
 
-    this.sbDom.addEventListener('mousedown', this.fakepd, false)
-    this.sbDom.addEventListener('mousemove', this.fakepm, false)
-    this.sbDom.addEventListener('mouseup', this.fakepu, false)
+    this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
+    this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
+    this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
 
     this.renderBoard()
     return this;
@@ -108,25 +94,16 @@ class sbBoard {
     if (_obj.src) {
       this.bgObj = await this.asyncLoadImage(_obj.src)
       if (this.bgObj.success) {
-        
+        this.zoomSize = this.bgObj.scaled;
         this.sbDom.width = this.bgObj.viewWidth
         this.sbDom.height = this.bgObj.viewHeight
       }
     } else {
       this.sbCtx.fillStyle = _obj.color
+      this.zoomSize = 1;
     }
-    this.renderBoard()
   }
-  // 保存整个画布数据
-  // saveImageData() {
-  //   this.imgData = this.sbCtx.getImageData(0, 0, this.sbDom.width, this.sbDom.height)
-  // }
-  // // 重绘整个画布数据
-  // restoreImageData() {
-  //   console.log('restore image data class')
-  //   this.sbCtx.putImageData(this.imgData, 0, 0)
-  // }
-  // 加载背景图
+  // 加载图promise
   asyncLoadImage(src) {
     return new Promise((resolve) => {
       if (!src) {
@@ -138,11 +115,12 @@ class sbBoard {
       const image = new Image();
       image.src = src;
       image.onload = () => {
-        const { height, width } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
+        const { height, width, scaled } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
         resolve({
           success: true,
           msg: 'load image complite',
           data: image,
+          scaled: scaled,
           viewWidth: width,
           viewHeight: height,
           width: image.naturalWidth,
@@ -177,7 +155,7 @@ class sbBoard {
   normalFloat(floatNumber=0, fixed=1) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
-  calcCurrentZoomSize(size, plusMinus=true, step=0.2, min=0.2, max=2.1) {
+  calcCurrentZoomSize(size, plusMinus=true, step=0.1, min=0.2, max=2) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
       return null;
@@ -187,47 +165,15 @@ class sbBoard {
   }
   // 还原缩放
   zoomReset() {
-    if (this.zoomSize === 1) {
-      return;
-    }
-    const _times = parseFloat(((this.zoomSize-1)/0.2).toFixed(1))
-    let _zoom = 1
-    
-    if (_times < 0) {
-      for(let i=0;i<Math.abs(_times);i++) {
-        _zoom = _zoom * 1.01
-      }
-      _zoom = parseFloat(_zoom.toFixed(2))
-      this.sbCtx.scale(_zoom, _zoom);
-    } else {
-      for(let i=0;i<Math.abs(_times);i++) {
-        _zoom = _zoom * 1.01
-      }
-      _zoom = parseFloat(_zoom.toFixed(2))
-      this.sbCtx.scale(1/_zoom, 1/_zoom);
-    }
-    this.zoomSize = 1;
-    this.renderBoard()
+    this.zoomSize = this.bgObj.scaled;
   }
   // 放大
   zoomIn() {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize)
-    console.log(this.zoomSize)
-    if (this.zoomSize < 2.1) {
-      this.sbCtx.scale(1.01, 1.01);
-      this.renderBoard()
-    }
-    
   }
   // 缩小
   zoomOut() {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false)
-    console.log(this.zoomSize)
-    if (this.zoomSize > 0.2) {
-      this.sbCtx.scale(1/1.01, 1/1.01);
-      this.renderBoard()
-    }
-    
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -238,13 +184,7 @@ class sbBoard {
     this.drawType = params;
   }
   // 设定画笔点击坐标
-  setPencilPosition(x, y, e) {
-    console.log(e)
-    const circle = new Path2D();
-    circle.arc(x, y, 2, 0, 2*Math.PI);
-    this.sbCtx.fillStyle='red'
-    this.sbCtx.fill(circle)
-
+  setPencilPosition(x, y) {
     this.pencilPosition = {
       x: x,
       y: y
@@ -256,12 +196,21 @@ class sbBoard {
   }
   // 获取起点与终点之间的尺寸
   getDeltaSize(x, y) {
-    return {width : x - this.pencilPosition.x, height: y - this.pencilPosition.y};
+    return {
+      width : this.normalFloat((x - this.pencilPosition.x)*(1/this.zoomSize), 1), 
+      height: this.normalFloat((y - this.pencilPosition.y)*(1/this.zoomSize), 1) 
+    }
   }
   // 生成调整控点
   generateAdjustmentDot(x, y) {
     const circle = new Path2D();
-    circle.arc(x, y, 6, 0, 2*Math.PI);
+    circle.arc(
+      this.normalFloat(x*this.zoomSize, 1),
+      this.normalFloat(y*this.zoomSize, 1),
+      6, 
+      0, 
+      2*Math.PI
+    );
     return circle;
   }
   // 保存选中的框框到临时对象
@@ -365,7 +314,12 @@ class sbBoard {
         //   this.sbCtx.stroke();
         //   break;
         case 'rect':
-          this.sbCtx.strokeRect(val.x, val.y, val.width, val.height);
+          this.sbCtx.strokeRect(
+            this.normalFloat(val.x*this.zoomSize, 1),
+            this.normalFloat(val.y*this.zoomSize, 1),
+            this.normalFloat(val.width*this.zoomSize, 1),
+            this.normalFloat(val.height*this.zoomSize, 1)
+          );
           break;
         default:
       }
@@ -382,31 +336,33 @@ class sbBoard {
     //   this.sbCtx.stroke();
     // }
     this.adjustmentAddon()
-    window.requestAnimationFrame(()=>this.renderBoard)
+    window.requestAnimationFrame(()=>this.renderBoard())
   }
   // 画笔下笔事件方法
   pencilDown(e) {
+    const pointX = e.offsetX
+    const pointY = e.offsetY
     switch (this.drawType) {
       case "pointer":
         
         if (this.selectedDraw) {
-          const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(e.offsetX, e.offsetY)))
+          const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(pointX, pointY)))
           if (_item && this.selectedDraw.data.id !== _item.data.id) {
             this.selectedDraw = _item
           }
           for(let i=0;i<this.controlDotsPath.length;i++) {
-            if (this.sbCtx.isPointInPath(this.controlDotsPath[i].path, e.offsetX, e.offsetY)) {
+            if (this.sbCtx.isPointInPath(this.controlDotsPath[i].path, pointX, pointY)) {
               document.body.style.cursor = this.controlDotsPath[i].cursor;
               this.tinkerUp = this.controlDotsPath[i].code;
               break;
             }
           }
         } else {
-          this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(e.offsetX, e.offsetY)))
+          this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(pointX, pointY)))
         }
         
         // console.log(this.tinkerUp)
-        if (this.calcIsInsideDraw(e.offsetX, e.offsetY) || this.tinkerUp) {
+        if (this.calcIsInsideDraw(pointX, pointY) || this.tinkerUp) {
           
         } else {
           this.selectedDraw = null;
@@ -415,31 +371,30 @@ class sbBoard {
           return;
         }
         this.pencilPressing = true;
-        this.setPencilPosition(e.offsetX, e.offsetY)
-        
-        this.renderBoard()
+        this.setPencilPosition(pointX, pointY)
         break;
       case "rect":
         if (this.pencilPressing) {
           return;
         }
         this.pencilPressing = true;
-        this.setPencilPosition(e.offsetX, e.offsetY, e)
+        this.setPencilPosition(pointX, pointY)
         break;
     }
   }
   // 画笔移动事件方法
   pencilMove(e) {
-    // console.log(this.drawType)
+    const pointX = e.offsetX
+    const pointY = e.offsetY
     switch (this.drawType) {
       case "pointer":
         // console.log(this.pencilPressing)
         if (!this.pencilPressing) {
           if (!this.pencilPosition) {
-            document.body.style.cursor = this.calcIsOnDrawPath(e.offsetX, e.offsetY) || this.calcIsInsideDraw(e.offsetX, e.offsetY) ? 'move' : 'default'
+            document.body.style.cursor = this.calcIsOnDrawPath(pointX, pointY) || this.calcIsInsideDraw(pointX, pointY) ? 'move' : 'default'
             if (this.selectedDraw) {
               for(let i=0;i<this.controlDotsPath.length;i++) {
-                if (this.sbCtx.isPointInPath(this.controlDotsPath[i].path, e.offsetX, e.offsetY)) {
+                if (this.sbCtx.isPointInPath(this.controlDotsPath[i].path, pointX, pointY)) {
                   document.body.style.cursor = this.controlDotsPath[i].cursor;
                   break;
                 }
@@ -452,7 +407,7 @@ class sbBoard {
               // console.log('调整尺寸')
               // 调整尺寸
               const _sditem = this.selectedDraw.data;
-              const _ds = this.getDeltaSize(e.offsetX, e.offsetY)
+              const _ds = this.getDeltaSize(pointX, pointY)
               let _item = this.originDraws[this.selectedDraw.index];
               _item.selected = true;
               
@@ -501,7 +456,7 @@ class sbBoard {
             } else {
               // 整体移动
               const _sditem = this.selectedDraw.data;
-              const _ds = this.getDeltaSize(e.offsetX, e.offsetY)
+              const _ds = this.getDeltaSize(pointX, pointY)
               let _item = this.originDraws[this.selectedDraw.index];
               _item.selected = true;
               _item.x = _sditem.x + _ds.width
@@ -509,8 +464,6 @@ class sbBoard {
               _item.dx = _sditem.dx + _ds.width
               _item.dy = _sditem.dy + _ds.height
             }
-            
-            this.renderBoard()
           }
         }
         
@@ -518,7 +471,6 @@ class sbBoard {
       case "polygon":
         // console.log(this.pencilPosition)
         // if (this.tmpPolygon && this.pencilPosition) {
-        //   this.renderBoard()
         //   const _dp = this.getDestinationPosition(e.clientX, e.clientY)
         //   const _ds = this.getDeltaSize(e.clientX, e.clientY)
         //   this.sbCtx.beginPath()
@@ -532,13 +484,14 @@ class sbBoard {
         if (!this.pencilPressing) {
           return;
         }
-        this.renderBoard()
-        this.drawRect(e.offsetX, e.offsetY)
+        this.drawRect(pointX, pointY)
         break;
     }
   }
   // 画笔收笔方法
   pencilUp(e) {
+    const pointX = e.offsetX
+    const pointY = e.offsetY
     switch (this.drawType) {
       case "pointer":
         if (this.pencilPressing) {
@@ -581,13 +534,12 @@ class sbBoard {
         }
         
         this.pencilPosition = null;
-        this.renderBoard()
         
         break;
       case "rect":
         
         this.pencilPressing = false;
-        let someOneRect = this.drawRect(e.offsetX, e.offsetY)
+        let someOneRect = this.drawRect(pointX, pointY)
         
         someOneRect['width'] = Math.abs(someOneRect.width)
         someOneRect['height'] = Math.abs(someOneRect.height)
@@ -605,8 +557,6 @@ class sbBoard {
           this.originDraws.push(someOneRect)
           this.setSelectedDraw()
         }
-        
-        this.renderBoard()
         this.setDrawType('pointer')
         this.pencilPosition = null;
         break;
@@ -629,7 +579,6 @@ class sbBoard {
         //     this.originDraws.push(this.tmpPolygon)
         //     this.setDrawType('pointer')
         //     this.tmpPolygon = null;
-        //     this.renderBoard()
         //     return;
         //   }
         //   const _dp = this.getDestinationPosition(e.clientX, e.clientY)
@@ -658,7 +607,12 @@ class sbBoard {
       switch(_item.type) {
         case "rect":
           const _tmpRect = new Path2D()
-          _tmpRect.rect(_item.x, _item.y, _item.width, _item.height)
+          _tmpRect.rect(
+            this.normalFloat(_item.x*this.zoomSize, 1),
+            this.normalFloat(_item.y*this.zoomSize, 1),
+            this.normalFloat(_item.width*this.zoomSize, 1),
+            this.normalFloat(_item.height*this.zoomSize, 1)
+          )
           if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
             _flag = {
               data: _item,
@@ -682,7 +636,12 @@ class sbBoard {
       switch(_item.type) {
         case "rect":
           const _tmpRect = new Path2D()
-          _tmpRect.rect(_item.x, _item.y, _item.width, _item.height)
+          _tmpRect.rect(
+            this.normalFloat(_item.x*this.zoomSize, 1),
+            this.normalFloat(_item.y*this.zoomSize, 1),
+            this.normalFloat(_item.width*this.zoomSize, 1),
+            this.normalFloat(_item.height*this.zoomSize, 1)
+          )
           _final = this.sbCtx.isPointInPath(_tmpRect, x, y)
           break;
       }
@@ -695,7 +654,8 @@ class sbBoard {
       width: 0,
       height: 0,
       offsetX: 0,
-      offsetY: 0
+      offsetY: 0,
+      scaled: 1,
     }
     if (width && height) {
       _obj.width = Math.round(width * (this.sbDom.height/height))
@@ -703,11 +663,13 @@ class sbBoard {
         _obj.width = this.sbDom.width
         _obj.height = Math.round(height * (this.sbDom.width/width))
         _obj.offsetX = 0;
-        _obj.offsetY = parseFloat(((this.sbDom.height - _obj.height)/2).toFixed(1))
+        _obj.offsetY = this.normalFloat(((this.sbDom.height - _obj.height)/2), 1)
+        _obj.scaled = this.normalFloat((this.sbDom.width/width), 2);
       } else {
         _obj.height = this.sbDom.height
         _obj.offsetY = 0;
-        _obj.offsetX = parseFloat(((this.sbDom.width - _obj.width)/2).toFixed(1))
+        _obj.offsetX = this.normalFloat(((this.sbDom.width - _obj.width)/2), 1)
+        _obj.scaled = this.normalFloat((this.sbDom.height/height), 2);
       }
     }
     return _obj
