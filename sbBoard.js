@@ -62,12 +62,15 @@ class sbBoard {
     this.sbWrap.style.cssText = JSON.stringify(wrapDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbCtx = this.sbDom.getContext('2d')
     this.sbWrap.appendChild(this.sbDom)
-    this.originDraws = this.options.drawHistory;
+    this.originDraws = this.options.drawHistory.map(val => {
+      // val['selected']=false
+      return val;
+    });
 
     this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
     this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
     this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
-    this.sbDom.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
+    window.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
 
     this.renderBoard()
@@ -106,6 +109,7 @@ class sbBoard {
       this.sbCtx.fillStyle = _obj.color
       this.zoomSize = 1;
     }
+    // this.renderBoard()
   }
   // 加载图promise
   asyncLoadImage(src) {
@@ -172,21 +176,21 @@ class sbBoard {
     this.zoomSize = this.bgObj.scaled;
   }
   // 放大
-  zoomIn(step=0.1) {
+  zoomIn(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
     console.log(this.zoomSize)
   }
   // 缩小
-  zoomOut(step=0.1) {
+  zoomOut(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false, step)
     console.log(this.zoomSize)
   }
   // 工具栏用方法end
   // 设置画图类型
-  setDrawType(params) {
-    this.originDraws.forEach(val => {
-      val['selected'] = false;
-    })
+  setDrawType(params, publicUse=true) {
+    if (publicUse) {
+      this.selectedDraw = null;
+    }
     this.drawType = params;
   }
   // 设定画笔点击坐标
@@ -221,25 +225,11 @@ class sbBoard {
     );
     return circle;
   }
-  // 保存选中的框框到临时对象
-  setSelectedDraw() {
-    this.selectedDraw = null;
-    for(let i=0;i<this.originDraws.length;i++) {
-      if (this.originDraws[i].selected) {
-        this.selectedDraw = JSON.parse(JSON.stringify({
-          data: this.originDraws[i],
-          index: i
-        }))
-        break;
-      }
-    }
-  }
   // 调整框框插件
   adjustmentAddon() {
     if (!this.selectedDraw) {
       return;
     }
-    
     const item = this.originDraws[this.selectedDraw.index];
     this.controlDotsPath = [
       {
@@ -329,7 +319,7 @@ class sbBoard {
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
     if (e.ctrlKey && Math.abs(_wheelDelta) > 0) {
-      if (_wheelDelta<0) {
+      if (_wheelDelta > 0) {
         this.zoomIn(0.010)
       } else {
         this.zoomOut(0.010)
@@ -344,6 +334,10 @@ class sbBoard {
     if (this.selectedDraw) {
       const _item = this.originDraws[this.selectedDraw.index]
       switch(keycode) {
+        case 32:
+          e.preventDefault()
+          e.stopPropagation()
+          break;
         case 17:
           e.preventDefault()
           e.stopPropagation()
@@ -391,15 +385,16 @@ class sbBoard {
         } else {
           this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(pointX, pointY)))
         }
-        
-        if (this.calcIsInsideDraw(pointX, pointY) || this.tinkerUp) {
-          
-        } else {
+        if (this.selectedDraw && !this.calcIsInsideDraw(pointX, pointY) && !this.tinkerUp && !this.calcIsOnDrawPath(pointX, pointY)) {
           this.selectedDraw = null;
         }
+        
         if (this.pencilPressing) {
           return;
         }
+        // this.originDraws.forEach((val, index) => {
+        //   console.log(val.selected, index)
+        // })
         this.pencilPressing = true;
         this.setPencilPosition(pointX, pointY)
         break;
@@ -438,8 +433,6 @@ class sbBoard {
               const _sditem = this.selectedDraw.data;
               const _ds = this.getDeltaSize(pointX, pointY)
               let _item = this.originDraws[this.selectedDraw.index];
-              _item.selected = true;
-              
               switch(this.tinkerUp) {
                 case "bm":
                   _item.height = _sditem.height + _ds.height
@@ -487,7 +480,6 @@ class sbBoard {
               const _sditem = this.selectedDraw.data;
               const _ds = this.getDeltaSize(pointX, pointY)
               let _item = this.originDraws[this.selectedDraw.index];
-              _item.selected = true;
               _item.x = _sditem.x + _ds.width
               _item.y = _sditem.y + _ds.height
               _item.dx = _sditem.dx + _ds.width
@@ -570,12 +562,15 @@ class sbBoard {
         if (someOneRect.width > 20 || someOneRect.height > 20)  {
           // 记录已经画的rects
           someOneRect['id'] = this.generateUUID()
-          someOneRect['selected'] = true
+          // someOneRect['selected'] = true
           this.originDraws.push(someOneRect)
           this.tmpRect = null;
-          this.setSelectedDraw()
+          this.selectedDraw = JSON.parse(JSON.stringify({
+            data: this.originDraws[this.originDraws.length-1],
+            index: (this.originDraws.length-1)
+          }))
         }
-        this.setDrawType('pointer')
+        this.setDrawType('pointer', false)
         this.pencilPosition = null;
         break;
     }
@@ -596,6 +591,7 @@ class sbBoard {
             _item.height
           )
           if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
+            // _item['selected'] = true;
             _flag = {
               data: _item,
               index: i
