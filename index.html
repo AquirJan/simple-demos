@@ -66,8 +66,12 @@
         <button id="getData">getData</button>
       </li>
       <!-- 多边形 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="polygon">polygon</button>
+      </li> -->
+      <!-- 小图 -->
+      <li class="tools-list-item">
+        <button id="pcbSmall">pcbSmall</button>
       </li>
       <!-- 圆形 -->
       <!-- <li class="tools-list-item">
@@ -121,7 +125,7 @@
         strokeStyle: 'red',
         lineWidth: 3
       },
-      drawHistory: [{"dx":1792.9,"dy":1860.6,"height":608.4,"id":"c43ae412-7580-482a-bcfc-f6be9121145d","type":"rect","width":101,"x":1691.9,"y":1252.2,"selected":true}],
+      drawHistory: [{"dx":1774.6,"dy":1842.6,"height":608,"id":"c43ae412-7580-482a-bcfc-f6be9121145d","type":"rect","width":101,"x":1673.6,"y":1234.6,"selected":true}],
       width: window.innerWidth,
       height: window.innerHeight
     })
@@ -173,10 +177,10 @@
       console.log('pointer')
       _sbBoard.setDrawType('pointer')
     })
-    bindEvent('polygon', ()=>{
-      console.log('polygon')
-      _sbBoard.setDrawType('polygon')
-    })
+    // bindEvent('polygon', ()=>{
+    //   console.log('polygon')
+    //   _sbBoard.setDrawType('polygon')
+    // })
     // bindEvent('circle', ()=>{
     //   console.log('circle')
     //   _sbBoard.setDrawType('circle')
@@ -184,6 +188,10 @@
     bindEvent('setBg', ()=>{
       console.log('setBg')
       _sbBoard.setBackground({src:'./pcb_demo.jpg'})
+    })
+    bindEvent('pcbSmall', ()=>{
+      console.log('pcbSmall')
+      _sbBoard.setBackground({src:'./pcb_small.png'})
     })
     bindEvent('getData', ()=>{
       console.log('getData')
