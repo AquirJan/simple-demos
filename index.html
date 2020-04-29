@@ -61,6 +61,10 @@
       <li class="tools-list-item">
         <button id="pointer">pointer</button>
       </li>
+      <!-- 获取数据 -->
+      <li class="tools-list-item">
+        <button id="getData">getData</button>
+      </li>
       <!-- 多边形 -->
       <li class="tools-list-item">
         <button id="polygon">polygon</button>
@@ -109,18 +113,11 @@
       wrapStyle:{
         position: 'absolute',
       },
-      drawHistory: [
-        {
-          dx: 756,
-          dy: 377,
-          height: 99,
-          id: "c43ae412-7580-482a-bcfc-f6be9121145d",
-          type: "rect",
-          width: 140,
-          x: 616,
-          y: 278,
-        }
-      ],
+      pencilStyle: {
+        strokeStyle: 'red',
+        lineWidth: 3
+      },
+      drawHistory: [{"dx":425,"dy":437,"height":143,"id":"c43ae412-7580-482a-bcfc-f6be9121145d","type":"rect","width":28,"x":397,"y":294,"selected":true}],
       width: window.innerWidth,
       height: window.innerHeight
     })
@@ -180,6 +177,10 @@
     bindEvent('setBg', ()=>{
       console.log('setBg')
       _sbBoard.setBackground({src:'./pcb_demo.jpg'})
+    })
+    bindEvent('getData', ()=>{
+      console.log('getData')
+      console.log(JSON.stringify(_sbBoard.getDrawsData())) 
     })
     // const canvas = document.getElementById('canvas')
     // const image = new Image();

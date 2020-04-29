@@ -5,7 +5,11 @@ class sbBoard {
       height: window.innerHeight,
       style: {},
       wrapStyle: {},
-      drawHistory: []
+      drawHistory: [],
+      pencilStyle: {
+        strokeStyle: '#333',
+        lineWidth: 3
+      }
     }, options);
     this.sbCtx = null;
     this.sbDom = null;
@@ -19,16 +23,13 @@ class sbBoard {
     this.bgObj = null;
     this.pencilPosition = null;
     this.scaleStep = 0.4;
-    // this.pencilOverPosition = {
-    //   x: 0,
-    //   y: 0
-    // };
     this.drawType = 'rect'; // rect, line, polygon
     this.tmpPolygon = null // 存放临时 polygon 对象用
     this.tmpRect = null;
     this.imgData = null;
     this.zoomSize = 1;
-    this.drawsHistory = []
+    this.originDraws = []
+    this.fakeDraws = []
     this.controlDotsPath = []
     this.selectedDraw = null;
     this.fakepd = (e) => {
@@ -73,7 +74,7 @@ class sbBoard {
     this.sbWrap.style.cssText = JSON.stringify(wrapDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbCtx = this.sbDom.getContext('2d')
     this.sbWrap.appendChild(this.sbDom)
-    this.drawsHistory = this.options.drawHistory;
+    this.originDraws = this.options.drawHistory;
 
     this.sbDom.addEventListener('mousedown', this.fakepd, false)
     this.sbDom.addEventListener('mousemove', this.fakepm, false)
@@ -112,14 +113,14 @@ class sbBoard {
     this.renderBoard()
   }
   // 保存整个画布数据
-  saveImageData() {
-    this.imgData = this.sbCtx.getImageData(0, 0, this.sbDom.width, this.sbDom.height)
-  }
-  // 重绘整个画布数据
-  restoreImageData() {
-    console.log('restore image data class')
-    this.sbCtx.putImageData(this.imgData, 0, 0)
-  }
+  // saveImageData() {
+  //   this.imgData = this.sbCtx.getImageData(0, 0, this.sbDom.width, this.sbDom.height)
+  // }
+  // // 重绘整个画布数据
+  // restoreImageData() {
+  //   console.log('restore image data class')
+  //   this.sbCtx.putImageData(this.imgData, 0, 0)
+  // }
   // 加载背景图
   asyncLoadImage(src) {
     return new Promise((resolve) => {
@@ -154,14 +155,14 @@ class sbBoard {
       const { height, width } = this.calcImageSize()
       this.sbDom.width = width
       this.sbDom.height = height
-      this.sbCtx.drawImage(this.bgObj.data, 0, 0, this.sbDom.width*this.zoomSize, this.sbDom.height*this.zoomSize)
+      this.sbCtx.drawImage(this.bgObj.data, 0, 0, this.sbDom.width, this.sbDom.height)
     }
   }
   // 工具栏用方法
   // 清除
   clearWhole(publicUse = true) {
     if (publicUse) {
-      this.drawsHistory = []
+      this.originDraws = []
       this.selectedDraw = null;
       this.bgObj = null;
     }
@@ -173,23 +174,24 @@ class sbBoard {
   }
   // 放大
   zoomIn() {
-    this.zoomSize = this.zoomSize + 0.2
-    this.zoomSize = Math.max(0.6, Math.min(parseFloat(this.zoomSize.toFixed(1)), 2.8));
-    this.sbCtx.scale(this.zoomSize, this.zoomSize);
+    this.zoomSize = this.zoomSize + 0.1
+    this.zoomSize = Math.max(0.6, Math.min(parseFloat(this.zoomSize.toFixed(1)), 1.2));
+    console.log(this.zoomSize)
+    this.sbCtx.scale(1.01, 1.01);
     this.renderBoard()
   }
   // 缩小
   zoomOut() {
-    this.zoomSize = this.zoomSize - 0.2
-    this.zoomSize = Math.max(0.6, Math.min(parseFloat(this.zoomSize.toFixed(1)), 2.8));
-    this.sbCtx.scale(this.zoomSize, this.zoomSize);
-    
+    this.zoomSize = this.zoomSize - 0.1
+    this.zoomSize = Math.max(0.8, Math.min(parseFloat(this.zoomSize.toFixed(1)), 1.2));
+    console.log(this.zoomSize)
+    this.sbCtx.scale(1/1.01, 1/1.01);
     this.renderBoard()
   }
   // 工具栏用方法end
   // 设置画图类型
   setDrawType(params) {
-    this.drawsHistory.forEach(val => {
+    this.originDraws.forEach(val => {
       val['selected'] = false;
     })
     this.drawType = params;
@@ -201,13 +203,10 @@ class sbBoard {
       y: y
     }
   }
-  // 设置当前画笔悬停位置
-  // setPencilOverPosition(x, y) {
-  //   this.pencilOverPosition = {
-  //     x: x,
-  //     y: y
-  //   }
-  // }
+  // 获取框框数据
+  getDrawsData() {
+    return this.originDraws;
+  }
   // 获取起点与终点之间的尺寸
   getDeltaSize(x, y) {
     return {width : x - this.pencilPosition.x, height: y - this.pencilPosition.y};
@@ -215,16 +214,16 @@ class sbBoard {
   // 生成调整控点
   generateAdjustmentDot(x, y) {
     const circle = new Path2D();
-    circle.arc(this.normalFloat(x*this.zoomSize), this.normalFloat(y*this.zoomSize), 6, 0, 2*Math.PI);
+    circle.arc(x, y, 6, 0, 2*Math.PI);
     return circle;
   }
   // 保存选中的框框到临时对象
   setSelectedDraw() {
     this.selectedDraw = null;
-    for(let i=0;i<this.drawsHistory.length;i++) {
-      if (this.drawsHistory[i].selected) {
+    for(let i=0;i<this.originDraws.length;i++) {
+      if (this.originDraws[i].selected) {
         this.selectedDraw = JSON.parse(JSON.stringify({
-          data: this.drawsHistory[i],
+          data: this.originDraws[i],
           index: i
         }))
         break;
@@ -237,7 +236,7 @@ class sbBoard {
       return;
     }
     
-    const item = this.drawsHistory[this.selectedDraw.index];
+    const item = this.originDraws[this.selectedDraw.index];
     this.controlDotsPath = [
       {
         path: this.generateAdjustmentDot(item.x, item.y), 
@@ -286,16 +285,16 @@ class sbBoard {
     })
   }
   initPencilStyle() {
-    this.sbCtx.strokeStyle = '#333'
-    this.sbCtx.lineWidth = 2
+    this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+    this.sbCtx.lineWidth = this.options.pencilStyle.lineWidth
   }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
     // 设置背景图
-    this.drawBackgroundImage()
+    // this.drawBackgroundImage()
     this.initPencilStyle()
-    this.drawsHistory.forEach(val => {
+    this.originDraws.forEach(val => {
       switch (val.type) {
         // case 'polygon':
         //   this.sbCtx.beginPath();
@@ -405,7 +404,7 @@ class sbBoard {
               // 调整尺寸
               const _sditem = this.selectedDraw.data;
               const _ds = this.getDeltaSize(e.offsetX, e.offsetY)
-              let _item = this.drawsHistory[this.selectedDraw.index];
+              let _item = this.originDraws[this.selectedDraw.index];
               _item.selected = true;
               
               switch(this.tinkerUp) {
@@ -454,7 +453,7 @@ class sbBoard {
               // 整体移动
               const _sditem = this.selectedDraw.data;
               const _ds = this.getDeltaSize(e.offsetX, e.offsetY)
-              let _item = this.drawsHistory[this.selectedDraw.index];
+              let _item = this.originDraws[this.selectedDraw.index];
               _item.selected = true;
               _item.x = _sditem.x + _ds.width
               _item.y = _sditem.y + _ds.height
@@ -495,7 +494,7 @@ class sbBoard {
       case "pointer":
         if (this.pencilPressing) {
           if (this.selectedDraw) {
-            const _item = this.drawsHistory[this.selectedDraw.index];
+            const _item = this.originDraws[this.selectedDraw.index];
             // 修正翻转调整后的坐标错误偏差
             switch(this.tinkerUp) {
               case "tm":
@@ -554,7 +553,7 @@ class sbBoard {
           // 记录已经画的rects
           someOneRect['id'] = this.generateUUID()
           someOneRect['selected'] = true
-          this.drawsHistory.push(someOneRect)
+          this.originDraws.push(someOneRect)
           this.setSelectedDraw()
         }
         
@@ -578,7 +577,7 @@ class sbBoard {
         //       x: this.tmpPolygon.x,
         //       y: this.tmpPolygon.y
         //     })
-        //     this.drawsHistory.push(this.tmpPolygon)
+        //     this.originDraws.push(this.tmpPolygon)
         //     this.setDrawType('pointer')
         //     this.tmpPolygon = null;
         //     this.renderBoard()
@@ -591,7 +590,7 @@ class sbBoard {
         //   };
         //   if (this.detectTwoPointClose(this.tmpPolygon, _wayDot)) {
         //     this.tmpPolygon['closed'] = true;
-        //     this.drawsHistory.push(this.tmpPolygon)
+        //     this.originDraws.push(this.tmpPolygon)
         //     this.tmpPolygon = null;
         //   } else {
         //     this.tmpPolygon['way'] = this.tmpPolygon.way ? this.tmpPolygon['way'] : []
@@ -605,8 +604,8 @@ class sbBoard {
   // 计算画笔是否在某个画图上
   calcIsOnDrawPath(x, y) {
     let _flag = null;
-    for(let i=0;i<this.drawsHistory.length;i++) {
-      const _item = this.drawsHistory[i];
+    for(let i=0;i<this.originDraws.length;i++) {
+      const _item = this.originDraws[i];
       switch(_item.type) {
         case "rect":
           const _tmpRect = new Path2D()
@@ -614,7 +613,7 @@ class sbBoard {
           if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
             _flag = {
               data: _item,
-              // data: this.drawsHistory.slice(i, i+1),
+              // data: this.originDraws.slice(i, i+1),
               index: i
             }
           }
