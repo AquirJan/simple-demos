@@ -62,15 +62,14 @@ class sbBoard {
     this.sbWrap.style.cssText = JSON.stringify(wrapDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbCtx = this.sbDom.getContext('2d')
     this.sbWrap.appendChild(this.sbDom)
-    this.originDraws = this.options.drawHistory.map(val => {
-      // val['selected']=false
-      return val;
-    });
+    
+    this.setDrawsData(this.options.drawHistory)
 
     this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
     this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
     this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
     window.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
+    window.addEventListener('keydown', (e)=>this.sbDomKeyup(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
 
     this.renderBoard()
@@ -163,7 +162,7 @@ class sbBoard {
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
-  calcCurrentZoomSize(size, plusMinus=true, step=0.010, min=0.2, max=2) {
+  calcCurrentZoomSize(size, plusMinus=true, step=0.010, min=0.2, max=1) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
       return null;
@@ -178,12 +177,10 @@ class sbBoard {
   // 放大
   zoomIn(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
-    console.log(this.zoomSize)
   }
   // 缩小
   zoomOut(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false, step)
-    console.log(this.zoomSize)
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -290,6 +287,9 @@ class sbBoard {
     this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
     this.sbCtx.lineWidth = this.options.pencilStyle.lineWidth
   }
+  setDrawsData(data) {
+    this.originDraws = data 
+  }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
@@ -328,38 +328,64 @@ class sbBoard {
     e.preventDefault()
     e.stopPropagation()
   }
+  deleteSelectedDraw() {
+    if (this.selectedDraw) {
+      this.originDraws.splice(this.selectedDraw.index, 1)
+      this.selectedDraw = null;
+    }
+  }
+  sbDomKeyup(e) {
+    const keycode = e.keyCode;
+    if (keycode === 32){
+      // 空格
+      this.spaceBar = false;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+  }
   sbDomKeydown(e) {
     const keycode = e.keyCode;
-    console.log(keycode)
+    // console.log(keycode)
+    if (keycode === 32){
+      // 空格
+      this.spaceBar = true;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
     if (this.selectedDraw) {
       const _item = this.originDraws[this.selectedDraw.index]
       switch(keycode) {
-        case 32:
-          e.preventDefault()
-          e.stopPropagation()
+        case 8:
+        case 46:
+          this.deleteSelectedDraw()
           break;
-        case 17:
-          e.preventDefault()
-          e.stopPropagation()
-          break;
+        // case 17:
+        //   e.preventDefault()
+        //   e.stopPropagation()
+        //   break;
         case 37:
           // 左
           _item['x'] = _item.x - this.normalFloat(1/this.zoomSize)
+          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
         case 39:
           // 右
           _item['x'] = _item.x + this.normalFloat(1/this.zoomSize)
+          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
         case 38:
           // 上
           _item['y'] = _item.y - this.normalFloat(1/this.zoomSize)
+          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
         case 40:
           // 下
           _item['y'] = _item.y + this.normalFloat(1/this.zoomSize)
+          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
       }
-      this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
     }
     
   }
@@ -392,9 +418,6 @@ class sbBoard {
         if (this.pencilPressing) {
           return;
         }
-        // this.originDraws.forEach((val, index) => {
-        //   console.log(val.selected, index)
-        // })
         this.pencilPressing = true;
         this.setPencilPosition(pointX, pointY)
         break;
@@ -569,6 +592,8 @@ class sbBoard {
             data: this.originDraws[this.originDraws.length-1],
             index: (this.originDraws.length-1)
           }))
+        } else {
+          this.tmpRect = null;
         }
         this.setDrawType('pointer', false)
         this.pencilPosition = null;

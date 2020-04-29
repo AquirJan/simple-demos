@@ -192,11 +192,14 @@
     bindEvent('pcbSmall', ()=>{
       console.log('pcbSmall')
       _sbBoard.setBackground({src:'./pcb_small.png'})
+      _sbBoard.setDrawsData([])
     })
     bindEvent('getData', ()=>{
       console.log('getData')
       console.log(JSON.stringify(_sbBoard.getDrawsData())) 
     })
+
+    
     // const canvas = document.getElementById('canvas')
     // const image = new Image();
     // image.src = './pcb_demo.jpg';
