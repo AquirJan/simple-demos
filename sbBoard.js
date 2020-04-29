@@ -185,6 +185,30 @@ class sbBoard {
     size = plusMinus ? size + step : size - step
     return Math.max(min, Math.min(parseFloat(size.toFixed(2)), max));
   }
+  // 还原缩放
+  zoomReset() {
+    if (this.zoomSize === 1) {
+      return;
+    }
+    const _times = parseFloat(((this.zoomSize-1)/0.2).toFixed(1))
+    let _zoom = 1
+    
+    if (_times < 0) {
+      for(let i=0;i<Math.abs(_times);i++) {
+        _zoom = _zoom * 1.01
+      }
+      _zoom = parseFloat(_zoom.toFixed(2))
+      this.sbCtx.scale(_zoom, _zoom);
+    } else {
+      for(let i=0;i<Math.abs(_times);i++) {
+        _zoom = _zoom * 1.01
+      }
+      _zoom = parseFloat(_zoom.toFixed(2))
+      this.sbCtx.scale(1/_zoom, 1/_zoom);
+    }
+    this.zoomSize = 1;
+    this.renderBoard()
+  }
   // 放大
   zoomIn() {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize)
@@ -358,7 +382,7 @@ class sbBoard {
     //   this.sbCtx.stroke();
     // }
     this.adjustmentAddon()
-    
+    window.requestAnimationFrame(()=>this.renderBoard)
   }
   // 画笔下笔事件方法
   pencilDown(e) {
@@ -406,7 +430,6 @@ class sbBoard {
   }
   // 画笔移动事件方法
   pencilMove(e) {
-    return;
     // console.log(this.drawType)
     switch (this.drawType) {
       case "pointer":
@@ -516,7 +539,6 @@ class sbBoard {
   }
   // 画笔收笔方法
   pencilUp(e) {
-    return;
     switch (this.drawType) {
       case "pointer":
         if (this.pencilPressing) {

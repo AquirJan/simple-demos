@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <canvas id="c" width="350" height="150" style="border: 1px solid red;"></canvas>
+<div id="info"></div>
+  <script>
+    // global vars : canvas, scroll & scale
+let info        = document.getElementById("info");
+const canvas    = document.getElementById('c');
+let cw = canvas.width = 350,cx = cw/2;
+let ch = canvas.height = 150,cy = 75;
+const context   = c.getContext('2d');
+let scrollX     = 0;
+let scrollY     = 0;
+let scale       = 1;
+let scaleFactor = 0.02;
+
+
+// clear canvas and draw two boxes
+function render(){
+  //context.clearRect(0, 0, canvas.width/scale, canvas.height/scale);
+ 
+  
+  context.beginPath();
+  context.rect(100,50,50,50);
+  context.fillStyle = "red";
+  context.fill();
+  
+  context.beginPath();
+  context.rect(200,50,50,50);
+  context.fillStyle = "black";
+  context.fill();
+  
+  info.innerHTML=`Scroll: ${scrollX},${scrollY} - Scale : ${scale}`
+  requestAnimationFrame( render );
+}
+
+
+// handlencursor keys to move scroll
+// window.onkeydown = function(event){
+//   event.preventDefault();
+//   if(event.keyCode == 37)      scrollX -=10;
+//   else if(event.keyCode == 39) scrollX +=10;
+//   else if(event.keyCode == 38) scrollY -=10;
+//   else if(event.keyCode == 40) scrollY +=10;
+// };
+
+// Handl mousenwheel zoom
+canvas.onwheel= function(e){
+  e.preventDefault();
+  context.clearRect(-cw, -ch, 2 * cw, 2 * ch)
+  
+
+  let direction = e.deltaY > 0 ? 1 : -1;
+  
+  
+  scrollX += Math.round(e.offsetX * scaleFactor * direction);
+  scrollY += Math.round(e.offsetY * scaleFactor * direction);
+  scale += scaleFactor * direction;
+  
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  
+  context.translate(cx, cy);
+  context.scale(scale, scale);
+  context.translate(-cx, -cy);
+  //render()
+}
+
+render()
+  </script>
+</body>
+</html>
