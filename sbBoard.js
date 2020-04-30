@@ -37,10 +37,10 @@ class sbBoard {
     this.selectedDraw = null;
     this.spaceBar = false;
     this.draging = false;
-    // this.hoverPoint = {
-    //   x: 0,
-    //   y: 0,
-    // }
+    this.hoverPoint = {
+      x: 0,
+      y: 0,
+    }
     return this.init()
   }
   // 初始化
@@ -169,17 +169,17 @@ class sbBoard {
       this.bgObj = null;
     }
     this.sbCtx.fillStyle = '#fff'
-    this.sbCtx.fillRect(-this.sbDom.width*0.1, -this.sbDom.height*0.1, this.sbDom.width*1.1, this.sbDom.height*1.1)
+    this.sbCtx.fillRect(-this.sbDom.width, -this.sbDom.height, this.sbDom.width*2, this.sbDom.height*2)
   }
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
-  calcCurrentZoomSize(size, plusMinus=true, step=0.010, min=0.2, max=1) {
+  calcCurrentZoomSize(size, plus=true, step=0.010, min=0.5, max=1) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
       return null;
     }
-    size = plusMinus ? size + step : size - step
+    size = plus ? size + step : size - step
     return Math.max(min, Math.min(parseFloat(size.toFixed(3)), max));
   }
   // 还原缩放
@@ -189,10 +189,21 @@ class sbBoard {
   // 放大
   zoomIn(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
+    console.log(this.zoomSize)
+
+    this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
+    this.sbCtx.translate(this.sbDom.width/2, this.sbDom.height/2);
+    this.sbCtx.scale(this.zoomSize, this.zoomSize)
+    this.sbCtx.translate(-this.sbDom.width/2, -this.sbDom.height/2);
   }
   // 缩小
   zoomOut(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false, step)
+    
+    this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
+    this.sbCtx.translate(this.sbDom.width/2, this.sbDom.height/2);
+    this.sbCtx.scale(this.zoomSize, this.zoomSize)
+    this.sbCtx.translate(-this.sbDom.width/2, -this.sbDom.height/2);
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -329,13 +340,7 @@ class sbBoard {
       this.sbCtx.stroke(_tmpRect)
     }
     this.adjustmentAddon()
-    // if (this.hoverPoint) {
-    //   this.sbCtx.fillStyle="red"
-    //   this.sbCtx.beginPath()
-    //   this.sbCtx.arc(this.hoverPoint.x, this.hoverPoint.y, 6, 0, 2*Math.PI);
-    //   // console.log(circle)
-    //   this.sbCtx.fill()
-    // }
+    
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
@@ -481,6 +486,10 @@ class sbBoard {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
       return;
+    }
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY,
     }
     const pointX = this.normalFloat((e.offsetX+this.dragOffset.x)/this.zoomSize, 2); // 原始坐标
     const pointY = this.normalFloat((e.offsetY+this.dragOffset.y)/this.zoomSize, 2);
