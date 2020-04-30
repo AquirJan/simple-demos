@@ -523,17 +523,13 @@ class sbBoard {
               switch(this.tinkerUp) {
                 case "bm":
                   _item.height = _sditem.height + _ds.height
-                  _item.dy = _sditem.dy + _ds.height
                   break;
                 case "rm":
                   _item.width = _sditem.width + _ds.width
-                  _item.dx = _sditem.dx + _ds.width
                   break;
                 case "br":
                   _item.height = _sditem.height + _ds.height
-                  _item.dy = _sditem.dy + _ds.height
                   _item.width = _sditem.width + _ds.width
-                  _item.dx = _sditem.dx + _ds.width
                   break;
                 case "tm":
                   _item.height = _sditem.height - _ds.height
@@ -551,13 +547,11 @@ class sbBoard {
                   break;
                 case "tr":
                   _item.width = _sditem.width + _ds.width
-                  _item.dx = _sditem.dx + _ds.width
                   _item.height = _sditem.height - _ds.height
                   _item.y = _sditem.y + _ds.height
                   break;
                 case "bl":
                   _item.height = _sditem.height + _ds.height
-                  _item.dy = _sditem.dy + _ds.height
                   _item.width = _sditem.width - _ds.width
                   _item.x = _sditem.x + _ds.width
                   break;
@@ -569,8 +563,6 @@ class sbBoard {
               let _item = this.originDraws[this.selectedDraw.index];
               _item.x = _sditem.x + _ds.width
               _item.y = _sditem.y + _ds.height
-              _item.dx = _sditem.dx + _ds.width
-              _item.dy = _sditem.dy + _ds.height
             }
           }
         }
@@ -605,14 +597,15 @@ class sbBoard {
               case "tm":
               case "bm":
                 if (_item.height < 0) {
-                  [_item.y, _item.dy] = [_item.dy, _item.y]; // es6 对调两个值
+                  // [a, b] = [b, a]; // es6 对调两个值
+                  _item.y = _item.y + _item.height
                   _item.height = Math.abs(_item.height)
                 }
                 break;
               case "lm":
               case "rm":
                 if (_item.width < 0) {
-                  [_item.x, _item.dx] = [_item.dx, _item.x]; // es6 对调两个值
+                  _item.x = _item.x + _item.width
                   _item.width = Math.abs(_item.width)
                 }
                 break;
@@ -621,11 +614,11 @@ class sbBoard {
               case "tl":
               case "br":
                 if (_item.width < 0) {
-                  [_item.x, _item.dx] = [_item.dx, _item.x]; // es6 对调两个值
+                  _item.x = _item.x + _item.width
                   _item.width = Math.abs(_item.width)
                 }
                 if (_item.height < 0) {
-                  [_item.y, _item.dy] = [_item.dy, _item.y]; // es6 对调两个值
+                  _item.y = _item.y + _item.height
                   _item.height = Math.abs(_item.height)
                 }
                 break;
@@ -643,15 +636,17 @@ class sbBoard {
         
         this.pencilPressing = false;
         let someOneRect = this.drawRect(pointX, pointY)
-
+        const _dx = someOneRect.x+someOneRect.width;
+        if (someOneRect.x > _dx) {
+          someOneRect.x = _dx
+        }
+        const _dy = someOneRect.y+someOneRect.height
+        if (someOneRect.y > _dy) {
+          someOneRect.y = _dy
+        }
         someOneRect['width'] = Math.abs(someOneRect.width)
         someOneRect['height'] = Math.abs(someOneRect.height)
-        if (someOneRect.x > someOneRect.dx) {
-          [someOneRect.x, someOneRect.dx] = [someOneRect.dx, someOneRect.x]; // es6 对调两个值
-        }
-        if (someOneRect.y > someOneRect.dy) {
-          [someOneRect.y, someOneRect.dy] = [someOneRect.dy, someOneRect.x]; // es6 对调两个值
-        }
+        
         this.tmpRect = null;
         if (someOneRect.width > 20 || someOneRect.height > 20)  {
           // 记录已经画的rects
@@ -794,8 +789,6 @@ class sbBoard {
     return {
       x: this.pencilPosition.x,
       y: this.pencilPosition.y,
-      dx: cx,
-      dy: cy,
       width: _ds.width,
       height: _ds.height,
       type: 'rect',
