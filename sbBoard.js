@@ -37,6 +37,10 @@ class sbBoard {
     this.selectedDraw = null;
     this.spaceBar = false;
     this.draging = false;
+    // this.hoverPoint = {
+    //   x: 0,
+    //   y: 0,
+    // }
     return this.init()
   }
   // 初始化
@@ -199,10 +203,12 @@ class sbBoard {
     this.drawType = params;
   }
   // 设定画笔点击坐标
-  setPencilPosition(x, y) {
+  setPencilPosition(x, y, domX, domY) {
     this.pencilPosition = {
       x,
-      y
+      y,
+      domX,
+      domY
     }
   }
   // 获取框框数据
@@ -219,8 +225,8 @@ class sbBoard {
   // 生成调整控点
   generateAdjustmentDot(x, y, origin=false) {
     const circle = new Path2D();
-    const _x = origin ? x : this.normalFloat(x*this.zoomSize)
-    const _y = origin ? y : this.normalFloat(y*this.zoomSize)
+    const _x = origin ? x + this.normalFloat(this.dragOffset.x/this.zoomSize) : this.normalFloat(x*this.zoomSize) + this.dragOffset.x
+    const _y = origin ? y + this.normalFloat(this.dragOffset.y/this.zoomSize) : this.normalFloat(y*this.zoomSize) + this.dragOffset.y
     circle.arc(
       _x,
       _y,
@@ -298,33 +304,10 @@ class sbBoard {
   setDrawsData(data) {
     this.originDraws = data 
   }
-  reinitDragOffset() {
-    if (this.dragOffset.x!==0) {
-      const _reinitX = setInterval(()=>{
-        if (this.dragOffset.x <=0 ) {
-          this.dragOffset.x = 0
-          window.clearInterval(_reinitX)
-        }
-        this.dragOffset.x = this.dragOffset.x - 10
-      }, 30)
-    }
-    if (this.dragOffset.y!==0) {
-      const _reinitY = setInterval(()=>{
-        if (this.dragOffset.y <=0 ) {
-          this.dragOffset.y = 0
-          window.clearInterval(_reinitY)
-        }
-        this.dragOffset.y = this.dragOffset.y - 10
-      }, 30)
-    }
-  }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
     // 设置背景图
-    // if (!this.spaceBar) {
-    //   this.reinitDragOffset()
-    // }
     this.drawBackgroundImage(this.dragOffset.x, this.dragOffset.y)
     // console.log(this.originDraws)
     this.initPencilStyle()
@@ -332,8 +315,8 @@ class sbBoard {
       switch (val.type) {
         case 'rect':
           this.sbCtx.strokeRect(
-            this.normalFloat(val.x*this.zoomSize)+this.dragOffset.x,
-            this.normalFloat(val.y*this.zoomSize)+this.dragOffset.y,
+            this.normalFloat(val.x*this.zoomSize) + this.dragOffset.x,
+            this.normalFloat(val.y*this.zoomSize) + this.dragOffset.y,
             this.normalFloat(val.width*this.zoomSize),
             this.normalFloat(val.height*this.zoomSize)
           );
@@ -346,6 +329,13 @@ class sbBoard {
       this.sbCtx.stroke(this.tmpRect)
     }
     this.adjustmentAddon()
+    // if (this.hoverPoint) {
+    //   this.sbCtx.fillStyle="red"
+    //   this.sbCtx.beginPath()
+    //   this.sbCtx.arc(this.hoverPoint.x, this.hoverPoint.y, 6, 0, 2*Math.PI);
+    //   // console.log(circle)
+    //   this.sbCtx.fill()
+    // }
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
@@ -372,6 +362,7 @@ class sbBoard {
     if (keycode === 32){
       // 空格
       this.spaceBar = false;
+      document.documentElement.style.cursor = 'default'
       e.preventDefault()
       e.stopPropagation()
       return;
@@ -383,6 +374,7 @@ class sbBoard {
     if (keycode === 32){
       // 空格
       this.spaceBar = true;
+      document.documentElement.style.cursor = 'grabbing'
       e.preventDefault()
       e.stopPropagation()
       return;
@@ -434,9 +426,10 @@ class sbBoard {
       }
       return;
     }
-    const pointX = this.normalFloat(e.offsetX/this.zoomSize)
+    
+    const pointX = this.normalFloat(e.offsetX/this.zoomSize) 
     const pointY = this.normalFloat(e.offsetY/this.zoomSize)
-    console.log(this.drawType)
+    
     switch (this.drawType) {
       case "pointer":
         if (this.selectedDraw) {
@@ -446,7 +439,7 @@ class sbBoard {
           }
           for(let i=0;i<this.controlDotsPath.length;i++) {
             if (this.sbCtx.isPointInPath(this.controlDotsPath[i].originPath, pointX, pointY)) {
-              document.body.style.cursor = this.controlDotsPath[i].cursor;
+              document.documentElement.style.cursor = this.controlDotsPath[i].cursor;
               this.tinkerUp = this.controlDotsPath[i].code;
               break;
             }
@@ -462,14 +455,14 @@ class sbBoard {
           return;
         }
         this.pencilPressing = true;
-        this.setPencilPosition(pointX, pointY)
+        this.setPencilPosition(pointX, pointY, e.offsetX, e.offsetY)
         break;
       case "rect":
         if (this.pencilPressing) {
           return;
         }
         this.pencilPressing = true;
-        this.setPencilPosition(pointX, pointY)
+        this.setPencilPosition(pointX, pointY, e.offsetX, e.offsetY)
         break;
     }
   }
@@ -482,15 +475,23 @@ class sbBoard {
     }
     const pointX = this.normalFloat(e.offsetX/this.zoomSize)
     const pointY = this.normalFloat(e.offsetY/this.zoomSize)
+    // console.log(pointX, pointY)
+    // this.hoverPoint = {
+    //   x: pointX,
+    //   y: pointY
+    // }
     switch (this.drawType) {
       case "pointer":
         if (!this.pencilPressing) {
           if (!this.pencilPosition) {
-            document.body.style.cursor = this.calcIsOnDrawPath(pointX, pointY) || this.calcIsInsideDraw(pointX, pointY) ? 'move' : 'default'
+            if (!this.spaceBar) {
+              document.documentElement.style.cursor = this.calcIsOnDrawPath(pointX, pointY) || this.calcIsInsideDraw(pointX, pointY) ? 'move' : 'default'
+            }
+            
             if (this.selectedDraw) {
               for(let i=0;i<this.controlDotsPath.length;i++) {
                 if (this.sbCtx.isPointInPath(this.controlDotsPath[i].originPath, pointX, pointY)) {
-                  document.body.style.cursor = this.controlDotsPath[i].cursor;
+                  document.documentElement.style.cursor = this.controlDotsPath[i].cursor;
                   break;
                 }
               }
@@ -577,8 +578,8 @@ class sbBoard {
       this.pencilPressing = false;
       return;
     }
-    const pointX = this.normalFloat(e.offsetX/this.zoomSize)
-    const pointY = this.normalFloat(e.offsetY/this.zoomSize)
+    const pointX = this.normalFloat(e.offsetX/this.zoomSize) 
+    const pointY = this.normalFloat(e.offsetY/this.zoomSize) 
     switch (this.drawType) {
       case "pointer":
         if (this.pencilPressing) {
@@ -640,8 +641,8 @@ class sbBoard {
         if (someOneRect.width > 20 || someOneRect.height > 20)  {
           // 记录已经画的rects
           someOneRect['id'] = this.generateUUID()
-          // someOneRect['selected'] = true
           this.originDraws.push(someOneRect)
+          console.dir(someOneRect)
           this.tmpRect = null;
           this.selectedDraw = JSON.parse(JSON.stringify({
             data: this.originDraws[this.originDraws.length-1],
@@ -665,13 +666,12 @@ class sbBoard {
         case "rect":
           const _tmpRect = new Path2D()
           _tmpRect.rect(
-            _item.x,
-            _item.y,
+            this.normalFloat(_item.x + this.dragOffset.x/this.zoomSize),
+            this.normalFloat(_item.y + this.dragOffset.y/this.zoomSize),
             _item.width,
             _item.height
           )
           if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
-            // _item['selected'] = true;
             _flag = {
               data: _item,
               index: i
@@ -694,8 +694,8 @@ class sbBoard {
         case "rect":
           const _tmpRect = new Path2D()
           _tmpRect.rect(
-            _item.x,
-            _item.y,
+            _item.x + this.normalFloat(this.dragOffset.x/this.zoomSize),
+            _item.y + this.normalFloat(this.dragOffset.y/this.zoomSize),
             _item.width,
             _item.height
           )
@@ -776,8 +776,8 @@ class sbBoard {
     const _ds = this.getDeltaSize(cx, cy)
     this.tmpRect = new Path2D()
     this.tmpRect.rect(
-      this.pencilPosition.x*this.zoomSize,
-      this.pencilPosition.y*this.zoomSize, 
+      this.pencilPosition.domX,
+      this.pencilPosition.domY, 
       _ds.width*this.zoomSize, 
       _ds.height*this.zoomSize
     );
