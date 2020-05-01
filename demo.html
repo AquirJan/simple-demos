@@ -64,7 +64,7 @@ canvas.onwheel= function(e){
   scale += scaleFactor * direction;
   
   context.setTransform(1, 0, 0, 1, 0, 0);
-  
+  console.log(cx, cy)
   context.translate(cx, cy);
   context.scale(scale, scale);
   context.translate(-cx, -cy);
