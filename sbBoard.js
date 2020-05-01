@@ -163,38 +163,36 @@ class sbBoard {
       this.bgObj = null;
     }
     this.sbCtx.fillStyle = '#fff'
-    this.sbCtx.fillRect(-this.sbDom.width, -this.sbDom.height, this.sbDom.width*2, this.sbDom.height*2)
+    // if (this.bgObj) {
+    //   this.sbCtx.fillRect(-this.bgObj.width, -this.bgObj.height, this.bgObj.width*2, this.bgObj.height*2)
+    // } else {
+      this.sbCtx.fillRect(0, 0, this.sbDom.width/this.zoomSize, this.sbDom.height/this.zoomSize)
+    // }
+    
   }
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
-  calcCurrentZoomSize(size, plus=true, step=0.010, min=0.5, max=1) {
+  calcCurrentZoomSize(size, plus=true, step=0.010, min=0.15, max=1) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
       return null;
     }
     size = plus ? size + step : size - step
-    return Math.max(min, Math.min(parseFloat(size.toFixed(3)), max));
+    const _min = Math.min(this.bgObj.scaled, 1)
+    return Math.max(_min, Math.min(parseFloat(size.toFixed(3)), max));
   }
   // 还原缩放
   zoomReset() {
     this.zoomSize = this.bgObj.scaled;
-    this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
-    this.sbCtx.scale(this.zoomSize, this.zoomSize)
   }
   // 放大
   zoomIn(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
-    console.log(this.zoomSize)
-    // this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
-    // this.sbCtx.scale(this.zoomSize, this.zoomSize)
   }
   // 缩小
   zoomOut(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false, step)
-    
-    // this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
-    // this.sbCtx.scale(this.zoomSize, this.zoomSize)
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -331,7 +329,14 @@ class sbBoard {
     }
     this.adjustmentAddon()
     this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
-    this.sbCtx.scale(this.zoomSize, this.zoomSize)
+    // if (this.bgObj){
+    //   this.sbCtx.translate(this.sbDom.width/2, this.sbDom.height/2)
+    //   this.sbCtx.scale(this.zoomSize, this.zoomSize)
+    //   this.sbCtx.translate(-this.sbDom.width/2, -this.sbDom.height/2)
+    // } else {
+      this.sbCtx.scale(this.zoomSize, this.zoomSize)
+    // }
+    this.sbCtx.translate(this.dragOffset.x/this.zoomSize, this.dragOffset.y/this.zoomSize)
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
