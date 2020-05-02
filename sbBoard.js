@@ -93,8 +93,12 @@ class sbBoard {
   destroy() {
     this.sbWrap.remove()
   }
+  // 获取当前选中框框
+  getSelectedDraw(){
+    return this.selectedDraw
+  }
   // 获取画布dom
-  getCanavasDom() {
+  getCanvasDom() {
     return this.sbDom;
   }
   // 获取容器dom
