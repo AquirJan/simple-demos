@@ -162,13 +162,11 @@ class sbBoard {
       this.selectedDraw = null;
       this.bgObj = null;
     }
-    this.sbCtx.fillStyle = '#fff'
-    // if (this.bgObj) {
-    //   this.sbCtx.fillRect(-this.bgObj.width, -this.bgObj.height, this.bgObj.width*2, this.bgObj.height*2)
-    // } else {
-      this.sbCtx.fillRect(0, 0, this.sbDom.width/this.zoomSize, this.sbDom.height/this.zoomSize)
-    // }
-    
+    const clearSize ={
+      width: this.sbDom.width/this.zoomSize,
+      height: this.sbDom.height/this.zoomSize
+    }
+    this.sbCtx.clearRect(0, 0, clearSize.width*2, clearSize.height*2)
   }
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
@@ -297,6 +295,9 @@ class sbBoard {
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
+    this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
+    this.sbCtx.scale(this.zoomSize, this.zoomSize)
+    this.sbCtx.translate(this.dragOffset.x/this.zoomSize, this.dragOffset.y/this.zoomSize)
     // 设置背景图
     if (this.bgObj) {
       this.sbCtx.drawImage(this.bgObj.data, 0, 0)
@@ -328,15 +329,7 @@ class sbBoard {
       this.sbCtx.stroke(_tmpRect)
     }
     this.adjustmentAddon()
-    this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
-    // if (this.bgObj){
-    //   this.sbCtx.translate(this.sbDom.width/2, this.sbDom.height/2)
-    //   this.sbCtx.scale(this.zoomSize, this.zoomSize)
-    //   this.sbCtx.translate(-this.sbDom.width/2, -this.sbDom.height/2)
-    // } else {
-      this.sbCtx.scale(this.zoomSize, this.zoomSize)
-    // }
-    this.sbCtx.translate(this.dragOffset.x/this.zoomSize, this.dragOffset.y/this.zoomSize)
+    
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
