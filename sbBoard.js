@@ -32,6 +32,7 @@ class sbBoard {
     this.drawType = 'pointer'; // rect, line, polygon
     this.tmpPolygon = null // 存放临时 polygon 对象用
     this.zoomSize = 1;
+    this.oldZoomSize = 1
     this.originDraws = []
     this.controlDots = []
     this.selectedDraw = null;
@@ -176,9 +177,28 @@ class sbBoard {
       console.warn('size param is not a number')
       return null;
     }
+    this.oldZoomSize = size;
     size = plus ? size + step : size - step
     const _min = Math.min(this.bgObj.scaled, 1)
     return Math.max(_min, Math.min(parseFloat(size.toFixed(3)), max));
+  }
+  calcZoomedDragoffsetDeltaSize(zoomin=true){
+    let _deltaWidth = Math.abs(this.bgObj.width*this.zoomSize-this.bgObj.width*this.oldZoomSize)/2
+    let _deltaHeight = Math.abs(this.bgObj.height*this.zoomSize-this.bgObj.height*this.oldZoomSize)/2;
+    let x = 0;
+    let y = 0;
+    if (zoomin) {
+      x = this.dragOffset.x - _deltaWidth
+      y = this.dragOffset.y - _deltaHeight
+    } else {
+      x = this.dragOffset.x + _deltaWidth
+      y = this.dragOffset.y + _deltaHeight
+    }
+    console.log(x, y)
+    this.dragOffset = {
+      x,
+      y
+    }
   }
   // 还原缩放
   zoomReset() {
@@ -187,10 +207,16 @@ class sbBoard {
   // 放大
   zoomIn(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
+    if (this.oldZoomSize !== this.zoomSize) {
+      this.calcZoomedDragoffsetDeltaSize()
+    }
   }
   // 缩小
   zoomOut(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, false, step)
+    if (this.oldZoomSize !== this.zoomSize) {
+      this.calcZoomedDragoffsetDeltaSize(false)
+    }
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -778,15 +804,18 @@ class sbBoard {
   // 绘画矩形
   drawRect(cx, cy) {
     const _ds = this.getDeltaSize(cx, cy)
+    console.log(this.dragOffset.x)
+    const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
+    const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
     this.tmpRect = {
-      x: this.pencilPosition.x/this.zoomSize,
-      y: this.pencilPosition.y/this.zoomSize,
+      x: _x,
+      y: _y,
       width: _ds.width, 
       height: _ds.height
     }
     return {
-      x: this.pencilPosition.x/this.zoomSize,
-      y: this.pencilPosition.y/this.zoomSize,
+      x: _x,
+      y: _y,
       width: _ds.width,
       height: _ds.height,
       type: 'rect',

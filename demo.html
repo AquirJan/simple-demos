@@ -13,7 +13,7 @@
 let info        = document.getElementById("info");
 const canvas    = document.getElementById('c');
 let cw = canvas.width = 350,cx = cw/2;
-let ch = canvas.height = 150,cy = 75;
+let ch = canvas.height = 150,cy = ch/2;
 const context   = c.getContext('2d');
 let scrollX     = 0;
 let scrollY     = 0;
@@ -53,7 +53,7 @@ function render(){
 // Handl mousenwheel zoom
 canvas.onwheel= function(e){
   e.preventDefault();
-  context.clearRect(-cw, -ch, 2 * cw, 2 * ch)
+  context.clearRect(0, 0, 2 * cw, 2 * ch)
   
 
   let direction = e.deltaY > 0 ? 1 : -1;
@@ -64,7 +64,6 @@ canvas.onwheel= function(e){
   scale += scaleFactor * direction;
   
   context.setTransform(1, 0, 0, 1, 0, 0);
-  console.log(cx, cy)
   context.translate(cx, cy);
   context.scale(scale, scale);
   context.translate(-cx, -cy);
