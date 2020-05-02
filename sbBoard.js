@@ -194,7 +194,6 @@ class sbBoard {
       x = this.dragOffset.x + _deltaWidth
       y = this.dragOffset.y + _deltaHeight
     }
-    console.log(x, y)
     this.dragOffset = {
       x,
       y
@@ -202,6 +201,13 @@ class sbBoard {
   }
   // 还原缩放
   zoomReset() {
+    if (this.oldZoomSize !== this.zoomSize) {
+      this.calcZoomedDragoffsetDeltaSize(false)
+      this.dragOffset = {
+        x: 0,
+        y: 0
+      }
+    }
     this.zoomSize = this.bgObj.scaled;
   }
   // 放大
@@ -328,7 +334,6 @@ class sbBoard {
     if (this.bgObj) {
       this.sbCtx.drawImage(this.bgObj.data, 0, 0)
     }
-    // console.log(this.originDraws)
     this.initPencilStyle()
     this.originDraws.forEach(val => {
       switch (val.type) {
@@ -804,7 +809,6 @@ class sbBoard {
   // 绘画矩形
   drawRect(cx, cy) {
     const _ds = this.getDeltaSize(cx, cy)
-    console.log(this.dragOffset.x)
     const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
     const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
     this.tmpRect = {
