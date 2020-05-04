@@ -411,7 +411,7 @@ class sbBoard {
       if (this.tmpPolygon.closed){
         this.sbCtx.closePath()
       } else {
-        this.sbCtx.lineTo(this.hoverPoint.x/this.zoomSize, this.hoverPoint.y/this.zoomSize)
+        this.sbCtx.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       }
       this.sbCtx.stroke()
     }
