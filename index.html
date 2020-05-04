@@ -125,7 +125,8 @@
       width: window.innerWidth,
       height: window.innerHeight
     })
-    _sbBoard.setDrawType('polygon')
+    // _sbBoard.setDrawType('polygon')
+    _sbBoard.setDrawsData([{"x":2099,"y":2103,"ways":[{"x":2852,"y":1857},{"x":2384,"y":1453},{"x":2010,"y":1478}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0}])
     _sbBoard.setBackground({src:'./pcb_demo.jpg'})
     document.body.appendChild(_sbBoard.getWrapDom())
     _sbBoard.getCanvasDom().addEventListener('click', ()=>{
@@ -184,6 +185,7 @@
     bindEvent('setBg', ()=>{
       console.log('setBg')
       _sbBoard.setBackground({src:'./pcb_demo.jpg'})
+      _sbBoard.setDrawsData([{"x":2099,"y":2103,"ways":[{"x":2852,"y":1857},{"x":2384,"y":1453},{"x":2010,"y":1478}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0}])
       _sbBoard.zoomReset()
     })
     bindEvent('pcbSmall', ()=>{
