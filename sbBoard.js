@@ -127,6 +127,10 @@ class sbBoard {
       this.zoomSize = 1;
     }
   }
+  // 框框外部调整控制器
+  drawOutsideAddon(item){
+
+  }
   // 加载图promise
   asyncLoadImage(src) {
     return new Promise((resolve) => {
@@ -767,9 +771,8 @@ class sbBoard {
                   }
                   break;
               }
-              this.selectedDraw.data = JSON.parse(JSON.stringify(_item));
             }
-            
+            this.selectedDraw.data = JSON.parse(JSON.stringify(_item));
           }
           this.pencilPressing = false;
           this.tinkerUp = null;
