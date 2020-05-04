@@ -458,7 +458,10 @@ class sbBoard {
   }
   sbDomKeydown(e) {
     const keycode = e.keyCode;
-    // console.log(keycode)
+    if (keycode === 17 || keycode === 91) {
+      // ctrl || command
+
+    }
     if (keycode === 32){
       // 空格
       this.spaceBar = true;
@@ -469,6 +472,8 @@ class sbBoard {
     }
     if (this.selectedDraw) {
       const _item = this.originDraws[this.selectedDraw.index]
+      const _stepDelta = e.shiftKey ? 10 : 1;
+      const _step = this.normalFloat(_stepDelta/this.zoomSize)
       switch(keycode) {
         case 8:
         case 46:
@@ -480,22 +485,42 @@ class sbBoard {
         //   break;
         case 37:
           // 左
-          _item['x'] = _item.x - this.normalFloat(1/this.zoomSize)
+          _item['x'] = _item.x - _step
+          if (_item.ways) {
+            _item.ways.forEach(val=>{
+              val['x'] = val.x - _step
+            })
+          }
           this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
         case 39:
           // 右
-          _item['x'] = _item.x + this.normalFloat(1/this.zoomSize)
+          _item['x'] = _item.x + _step
+          if (_item.ways) {
+            _item.ways.forEach(val=>{
+              val['x'] = val.x + _step
+            })
+          }
           this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
         case 38:
           // 上
-          _item['y'] = _item.y - this.normalFloat(1/this.zoomSize)
+          _item['y'] = _item.y - _step
+          if (_item.ways) {
+            _item.ways.forEach(val=>{
+              val['y'] = val.y - _step
+            })
+          }
           this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
         case 40:
           // 下
-          _item['y'] = _item.y + this.normalFloat(1/this.zoomSize)
+          _item['y'] = _item.y + _step
+          if (_item.ways) {
+            _item.ways.forEach(val=>{
+              val['y'] = val.y + _step
+            })
+          }
           this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
           break;
       }
