@@ -52,9 +52,44 @@
       font-size: 1rem;
       border-radius: 4px;
     }
+
+    .wrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: auto 8fr;
+      grid-template-rows: auto 20fr;
+      grid-template-areas: 
+        'header header'
+        'sidebar workbench';
+    }
+    .header {
+      min-height: 30px;
+      background: #972;
+      grid-area: header;
+    }
+    .sidebar {
+      min-width: 120px;
+      background: #345;
+      grid-area: sidebar;
+    }
+    .workbench {
+      background: rgb(160, 146, 92);
+      grid-area: workbench;
+    }
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="header"></div>
+    <div class="sidebar"></div>
+    <div class="workbench" id="workbench">
+
+    </div>
+  </div>
   <div class="tool-bar">
     <ul class="tools-list">
       <!-- 指针 -->
@@ -112,23 +147,24 @@
         cb()
       })
     }
-
+    const workbenchDom = document.getElementById('workbench');
     const _sbBoard = new sbBoard({
       wrapStyle:{
-        position: 'absolute',
+        // position: 'absolute',
       },
       pencilStyle: {
         strokeStyle: 'red',
         lineWidth: 3
       },
       // drawHistory: [{"dx":1774,"dy":1842,"height":608,"id":"c43ae412-7580-482a-bcfc-f6be9121145d","type":"rect","width":101,"x":1673,"y":1234},{"x":2261,"y":2089,"dx":2345,"dy":2189,"width":87,"height":106,"type":"rect","id":"f13bdb2b-4d0d-4093-a401-b25d2e674aa3"},{"x":2145,"y":1737,"dx":2280,"dy":1911,"width":135,"height":174,"type":"rect","id":"7e4c3515-5c28-4096-90b3-2ed7c86317bb"},{"x":2602,"y":1135,"dx":2740,"dy":1289,"width":138,"height":154,"type":"rect","id":"2e5320bd-a6db-46e0-b003-4a40b08ea3ce"}],
-      width: window.innerWidth,
-      height: window.innerHeight
+      width: workbenchDom.clientWidth,
+      height: workbenchDom.clientHeight
     })
     // _sbBoard.setDrawType('polygon')
     _sbBoard.setDrawsData([{"x":2099,"y":2103,"ways":[{"x":2852,"y":1857},{"x":2384,"y":1453},{"x":2010,"y":1478}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
     _sbBoard.setBackground({src:'./pcb_demo.jpg'})
-    document.body.appendChild(_sbBoard.getWrapDom())
+    workbenchDom.appendChild(_sbBoard.getWrapDom())
+    // document.body.appendChild(_sbBoard.getWrapDom())
     _sbBoard.getCanvasDom().addEventListener('click', ()=>{
       const selectedDraw = _sbBoard.getSelectedDraw()
       console.log(selectedDraw)

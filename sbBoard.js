@@ -162,16 +162,22 @@ class sbBoard {
   // 工具栏用方法
   // 清除
   clearWhole(publicUse = true) {
+    let clearSize ={
+      width: this.sbDom.width,
+      height: this.sbDom.height
+    }
     if (publicUse) {
       this.originDraws = []
       this.selectedDraw = null;
       this.bgObj = null;
     }
-    const clearSize ={
-      width: this.sbDom.width/this.zoomSize,
-      height: this.sbDom.height/this.zoomSize
+    if (this.bgObj) {
+      clearSize ={
+        width: this.sbDom.width/this.bgObj.scaled,
+        height: this.sbDom.height/this.bgObj.scaled
+      }
     }
-    this.sbCtx.clearRect(0, 0, clearSize.width*2, clearSize.height*2)
+    this.sbCtx.clearRect(0, 0, clearSize.width, clearSize.height)
   }
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
@@ -205,16 +211,17 @@ class sbBoard {
   }
   // 还原缩放
   zoomReset() {
-      this.calcZoomedDragoffsetDeltaSize(false)
-      this.dragOffset = {
-        x: 0,
-        y: 0
-      }
+    this.calcZoomedDragoffsetDeltaSize(false)
+    this.dragOffset = {
+      x: 0,
+      y: 0
+    }
     this.zoomSize = this.bgObj.scaled;
   }
   // 放大
   zoomIn(step=0.05) {
     this.zoomSize = this.calcCurrentZoomSize(this.zoomSize, true, step)
+    console.log(this.zoomSize)
     if (this.oldZoomSize !== this.zoomSize) {
       this.calcZoomedDragoffsetDeltaSize()
     }
