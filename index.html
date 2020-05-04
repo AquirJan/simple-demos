@@ -65,10 +65,6 @@
       <li class="tools-list-item">
         <button id="getData">getData</button>
       </li>
-      <!-- 多边形 -->
-      <li class="tools-list-item">
-        <button id="polygon">polygon</button>
-      </li>
       <!-- 小图 -->
       <li class="tools-list-item">
         <button id="pcbSmall">pcbSmall</button>
@@ -77,18 +73,22 @@
       <!-- <li class="tools-list-item">
         <button id="circle">circle</button>
       </li> -->
+      <!-- 多边形 -->
+      <li class="tools-list-item">
+        <button id="polygon">polygon</button>
+      </li>
       <!-- 矩形 -->
       <li class="tools-list-item">
         <button id="rect">rect</button>
       </li>
       <!-- 设置图片 -->
       <li class="tools-list-item">
-        <button id="setBg">setBg</button>
+        <button id="pcbBig">pcbBig</button>
       </li>
       <!-- 清除 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="clear">clear</button>
-      </li>
+      </li> -->
       <!-- 缩小 -->
       <li class="tools-list-item">
         <button id="zoomOut">zoomOut</button>
@@ -150,10 +150,10 @@
     //   console.log('restore button')
     // })
 
-    bindEvent('clear', ()=>{
-      console.log('clear whole')
-      _sbBoard.clearWhole()
-    })
+    // bindEvent('clear', ()=>{
+    //   console.log('clear whole')
+    //   _sbBoard.clearWhole()
+    // })
     bindEvent('zoomIn', ()=>{
       console.log('zoomIn')
       _sbBoard.zoomIn()
@@ -182,8 +182,8 @@
     //   console.log('circle')
     //   _sbBoard.setDrawType('circle')
     // })
-    bindEvent('setBg', ()=>{
-      console.log('setBg')
+    bindEvent('pcbBig', ()=>{
+      console.log('pcbBig')
       _sbBoard.setBackground({src:'./pcb_demo.jpg'})
       _sbBoard.setDrawsData([{"x":2099,"y":2103,"ways":[{"x":2852,"y":1857},{"x":2384,"y":1453},{"x":2010,"y":1478}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0}])
       _sbBoard.zoomReset()

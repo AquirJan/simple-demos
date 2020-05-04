@@ -539,7 +539,7 @@ class sbBoard {
             if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
               document.documentElement.style.cursor = _dot.cursor;
               this.tinkerUp = {code:_dot.code};
-              if (_dot.wayIndex.constructor === Number) {
+              if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
                 this.tinkerUp['wayIndex'] = _dot.wayIndex
               }
               break;
@@ -645,7 +645,7 @@ class sbBoard {
                   _item.x = _sditem.x + _ds.width
                   break;
                 case "pp":
-                  if (this.tinkerUp.wayIndex.constructor === Number) {
+                  if (this.tinkerUp.wayIndex !== undefined && this.tinkerUp.wayIndex !== null && this.tinkerUp.wayIndex.constructor === Number) {
                     _item.ways[this.tinkerUp.wayIndex].x = _sditem.ways[this.tinkerUp.wayIndex].x + _ds.width
                     _item.ways[this.tinkerUp.wayIndex].y = _sditem.ways[this.tinkerUp.wayIndex].y + _ds.height
                   } else {
