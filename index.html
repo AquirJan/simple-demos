@@ -58,17 +58,17 @@
   <div class="tool-bar">
     <ul class="tools-list">
       <!-- 指针 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="pointer">pointer</button>
-      </li>
+      </li> -->
       <!-- 获取数据 -->
       <li class="tools-list-item">
         <button id="getData">getData</button>
       </li>
       <!-- 多边形 -->
-      <!-- <li class="tools-list-item">
+      <li class="tools-list-item">
         <button id="polygon">polygon</button>
-      </li> -->
+      </li>
       <!-- 小图 -->
       <li class="tools-list-item">
         <button id="pcbSmall">pcbSmall</button>
@@ -77,10 +77,6 @@
       <!-- <li class="tools-list-item">
         <button id="circle">circle</button>
       </li> -->
-      <!-- 线 -->
-      <li class="tools-list-item">
-        <button id="line">line</button>
-      </li>
       <!-- 矩形 -->
       <li class="tools-list-item">
         <button id="rect">rect</button>
@@ -129,7 +125,7 @@
       width: window.innerWidth,
       height: window.innerHeight
     })
-    // _sbBoard.setDrawType('pointer')
+    _sbBoard.setDrawType('polygon')
     _sbBoard.setBackground({src:'./pcb_demo.jpg'})
     document.body.appendChild(_sbBoard.getWrapDom())
     _sbBoard.getCanvasDom().addEventListener('click', ()=>{
@@ -169,24 +165,18 @@
       console.log('zoomReset')
       _sbBoard.zoomReset()
     })
-    bindEvent('line', ()=>{
-      console.log('line')
-      // _sbBoard.setDrawType('line')
-      // _sbBoard.getCanavasCtx().translate(100, 100)
-      // _sbBoard.getCanavasCtx().scale(2,2)
-    })
     bindEvent('rect', ()=>{
       console.log('rect')
       _sbBoard.setDrawType('rect')
     })
-    bindEvent('pointer', ()=>{
-      console.log('pointer')
-      _sbBoard.setDrawType('pointer')
-    })
-    // bindEvent('polygon', ()=>{
-    //   console.log('polygon')
-    //   _sbBoard.setDrawType('polygon')
+    // bindEvent('pointer', ()=>{
+    //   console.log('pointer')
+    //   _sbBoard.setDrawType('pointer')
     // })
+    bindEvent('polygon', ()=>{
+      console.log('polygon')
+      _sbBoard.setDrawType('polygon')
+    })
     // bindEvent('circle', ()=>{
     //   console.log('circle')
     //   _sbBoard.setDrawType('circle')

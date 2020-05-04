@@ -29,7 +29,7 @@ class sbBoard {
     this.bgObj = null;
     this.pencilPosition = null;
     this.btnScaleStep = 0.4;
-    this.drawType = 'pointer'; // rect, line, polygon
+    this.drawType = 'pointer'; // rect, polygon
     this.tmpPolygon = null // 存放临时 polygon 对象用
     this.zoomSize = 1;
     this.oldZoomSize = 1
@@ -205,13 +205,11 @@ class sbBoard {
   }
   // 还原缩放
   zoomReset() {
-    if (this.oldZoomSize !== this.zoomSize) {
       this.calcZoomedDragoffsetDeltaSize(false)
       this.dragOffset = {
         x: 0,
         y: 0
       }
-    }
     this.zoomSize = this.bgObj.scaled;
   }
   // 放大
@@ -264,56 +262,78 @@ class sbBoard {
   adjustmentAddon() {
     if (this.selectedDraw) {
       const item = this.originDraws[this.selectedDraw.index];
-      this.controlDots = [
-        {
-          x: item.x,
-          y: item.y,
-          cursor: 'nwse-resize',
-          code: 'tl',
-        },
-        {
-          x: item.x+item.width/2, 
-          y: item.y,
-          cursor: 'ns-resize',
-          code: 'tm',
-        },
-        {
-          x: item.x+item.width, 
-          y: item.y,
-          cursor: 'nesw-resize',
-          code: 'tr',
-        },
-        {
-          x: item.x+item.width, 
-          y: item.y+item.height/2,
-          cursor: 'ew-resize',
-          code: 'rm',
-        },
-        {
-          x: item.x+item.width, 
-          y: item.y+item.height,
-          cursor: 'nwse-resize',
-          code: 'br',
-        },
-        {
-          x: item.x+item.width/2, 
-          y: item.y+item.height,
-          cursor: 'ns-resize',
-          code: 'bm',
-        },
-        {
-          x: item.x, 
-          y: item.y+item.height,
-          cursor: 'nesw-resize',
-          code: 'bl',
-        },
-        {
-          x: item.x, 
-          y: item.y+item.height/2,
-          cursor: 'ew-resize',
-          code: 'lm',
-        }
-      ]
+      switch(this.selectedDraw.data.type) {
+        case "rect":
+          this.controlDots = [
+            {
+              x: item.x,
+              y: item.y,
+              cursor: 'nwse-resize',
+              code: 'tl',
+            },
+            {
+              x: item.x+item.width/2, 
+              y: item.y,
+              cursor: 'ns-resize',
+              code: 'tm',
+            },
+            {
+              x: item.x+item.width, 
+              y: item.y,
+              cursor: 'nesw-resize',
+              code: 'tr',
+            },
+            {
+              x: item.x+item.width, 
+              y: item.y+item.height/2,
+              cursor: 'ew-resize',
+              code: 'rm',
+            },
+            {
+              x: item.x+item.width, 
+              y: item.y+item.height,
+              cursor: 'nwse-resize',
+              code: 'br',
+            },
+            {
+              x: item.x+item.width/2, 
+              y: item.y+item.height,
+              cursor: 'ns-resize',
+              code: 'bm',
+            },
+            {
+              x: item.x, 
+              y: item.y+item.height,
+              cursor: 'nesw-resize',
+              code: 'bl',
+            },
+            {
+              x: item.x, 
+              y: item.y+item.height/2,
+              cursor: 'ew-resize',
+              code: 'lm',
+            }
+          ]
+          break;
+        case "polygon":
+          this.controlDots = [
+            {
+              x: item.x,
+              y: item.y,
+              cursor: 'ns-resize',
+              code: 'pp',
+            },
+          ]
+          item.ways.forEach(val=>{
+            this.controlDots.push({
+              x: val.x,
+              y: val.y,
+              cursor: 'ns-resize',
+              code: 'pp',
+            })
+          })
+          break;
+      }
       this.sbCtx.fillStyle = '#2ac2e4';
       this.controlDots.forEach(val => {
         const circle = this.drawModifyDot(val)
@@ -349,7 +369,15 @@ class sbBoard {
             val.height
           );
           break;
-        default:
+        case "polygon":
+          this.sbCtx.beginPath();
+          this.sbCtx.moveTo(val.x, val.y)
+          val.ways.forEach(wval => {
+            this.sbCtx.lineTo(wval.x, wval.y)
+          })
+          this.sbCtx.closePath();
+          this.sbCtx.stroke()
+          break;
       }
     })
     // 临时矩形
@@ -362,6 +390,20 @@ class sbBoard {
         this.tmpRect.height,
       )
       this.sbCtx.stroke(_tmpRect)
+    }
+    // 临时多边形
+    if (this.tmpPolygon) {
+      this.sbCtx.beginPath()
+      this.sbCtx.moveTo(this.tmpPolygon.x, this.tmpPolygon.y)
+      this.tmpPolygon.ways.forEach(val => {
+        this.sbCtx.lineTo(val.x, val.y)
+      })
+      if (this.tmpPolygon.closed){
+        this.sbCtx.closePath()
+      } else {
+        this.sbCtx.lineTo(this.hoverPoint.x/this.zoomSize, this.hoverPoint.y/this.zoomSize)
+      }
+      this.sbCtx.stroke()
     }
     this.adjustmentAddon()
     
@@ -443,6 +485,18 @@ class sbBoard {
     }
     
   }
+  // 调整点的path2d
+  drawModifyDot(dot){
+    const _dotPath2d = new Path2D();
+    _dotPath2d.arc(
+      dot.x,
+      dot.y,
+      4/this.zoomSize, 
+      0, 
+      2*Math.PI
+    );
+    return _dotPath2d
+  }
   // 画笔下笔事件方法
   pencilDown(e) {
     if (this.spaceBar && !this.draging) {
@@ -499,18 +553,10 @@ class sbBoard {
         this.pencilPressing = true;
         this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
         break;
+      case "polygon":
+        this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+        break;
     }
-  }
-  drawModifyDot(dot){
-    const _dotPath2d = new Path2D();
-    _dotPath2d.arc(
-      dot.x,
-      dot.y,
-      4/this.zoomSize, 
-      0, 
-      2*Math.PI
-    );
-    return _dotPath2d
   }
   // 画笔移动事件方法
   pencilMove(e) {
@@ -603,7 +649,10 @@ class sbBoard {
         if (!this.pencilPressing) {
           return;
         }
-        this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
+        this.drawRect()
+        break;
+      case 'polygon':
+        this.drawPolygon(false, true)
         break;
     }
   }
@@ -666,7 +715,6 @@ class sbBoard {
         
         break;
       case "rect":
-        
         this.pencilPressing = false;
         let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
         const _dx = someOneRect.x+someOneRect.width;
@@ -693,6 +741,23 @@ class sbBoard {
         this.setDrawType('pointer', false)
         this.pencilPosition = null;
         break;
+      case 'polygon':
+        if (this.detectIsDBClick(e.timeStamp)) {
+          this.setDrawType('pointer', false)
+          this.tmpPolygon['id'] = this.generateUUID()
+          this.tmpPolygon['closed'] = true;
+          this.pencilPosition = null;
+          this.originDraws.push(this.tmpPolygon)
+          this.tmpPolygon = null;
+          this.selectedDraw = JSON.parse(JSON.stringify({
+            data: this.originDraws[this.originDraws.length-1],
+            index: (this.originDraws.length-1)
+          }))
+          
+        } else {
+          this.drawPolygon()
+        }
+        break;
     }
     
   }
@@ -711,6 +776,21 @@ class sbBoard {
             _item.height
           )
           if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
+            _flag = {
+              data: _item,
+              index: i
+            }
+          }
+          break;
+        case "polygon":
+          let _svg_path = [`M${_item.x} ${_item.y}`]
+          _item.ways.forEach(val=>{
+            _svg_path.push(`L${val.x} ${val.y}`)
+          })
+          _svg_path.push('Z')
+          _svg_path = _svg_path.join(' ')
+          const _svgPath2d = new Path2D(_svg_path)
+          if(this.sbCtx.isPointInStroke(_svgPath2d, x, y)){
             _flag = {
               data: _item,
               index: i
@@ -810,6 +890,31 @@ class sbBoard {
       return false;
     }
   }
+  // 绘画多边形
+  drawPolygon(closed=false, moving=false) {
+    if (!this.pencilPosition) {
+      return
+    }
+    const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
+    const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
+
+    if (!this.tmpPolygon) {
+      this.tmpPolygon = {
+        x: _x,
+        y: _y,
+        ways: [],
+        type: 'polygon'
+      }
+    } else {
+      if (!moving) {
+        this.tmpPolygon['ways'].push({
+          x: _x,
+          y: _y,
+        })
+      }
+    }
+    this.tmpPolygon['closed'] = closed;
+  }
   // 绘画矩形
   drawRect(cx, cy) {
     const _ds = this.getDeltaSize(cx, cy)
@@ -819,14 +924,9 @@ class sbBoard {
       x: _x,
       y: _y,
       width: _ds.width, 
-      height: _ds.height
-    }
-    return {
-      x: _x,
-      y: _y,
-      width: _ds.width,
       height: _ds.height,
       type: 'rect',
     }
+    return this.tmpRect
   }
 }
