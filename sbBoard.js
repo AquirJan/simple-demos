@@ -127,9 +127,58 @@ class sbBoard {
       this.zoomSize = 1;
     }
   }
+  // 找出4个极点
+  findOut4Poles(selectedDraws) {
+    let _drawers = []
+    if (selectedDraws.constructor === Array){
+      _drawers = selectedDraws.slice();
+    } else if (selectedDraws.constructor === Object) {
+      _drawers = [selectedDraws]
+    }
+    let _x_coordinate = [];
+    let _y_coordinate = [];
+    _drawers.forEach(val => {
+      const _item = val;
+      _x_coordinate.push(_item.x)
+      _y_coordinate.push(_item.y)
+      if (_item.width) {
+        _x_coordinate.push(_item.x+_item.width)
+      }
+      if (_item.height) {
+        _y_coordinate.push(_item.y+_item.height)
+      }
+      if (_item.ways) {
+        _item.ways.forEach(wval=>{
+          _x_coordinate.push(wval.x)
+          _y_coordinate.push(wval.y)
+        })
+      }
+    })
+    _x_coordinate.sort((a, b)=>a-b)
+    _y_coordinate.sort((a, b)=>a-b)
+    const modifyRect = {
+      x: _x_coordinate[0],
+      y: _y_coordinate[0],
+      width: _x_coordinate[_x_coordinate.length-1]-_x_coordinate[0],
+      height: _y_coordinate[_y_coordinate.length-1]-_y_coordinate[0]
+    }
+    return modifyRect
+  }
   // 框框外部调整控制器
   drawOutsideAddon(item){
-
+    if (this.selectedDraw) {
+      let modifyRect = this.findOut4Poles(this.selectedDraw.data)
+      const _gap = 5;
+      
+      let mrPath2d = new Path2D()
+      // modifyRect.setLineDash([5, 5])
+      mrPath2d.rect(modifyRect.x-_gap, modifyRect.y-_gap, modifyRect.width+_gap, modifyRect.height+_gap)
+      
+      this.sbCtx.stroke(mrPath2d)
+      // console.log(_x_coordinate)
+      // console.log(_y_coordinate)
+      
+    }
   }
   // 加载图promise
   asyncLoadImage(src) {
@@ -181,11 +230,13 @@ class sbBoard {
         height: this.sbDom.height/this.bgObj.scaled
       }
     }
-    this.sbCtx.clearRect(0, 0, clearSize.width, clearSize.height)
+    this.sbCtx.clearRect(-clearSize.width, -clearSize.height, clearSize.width*3, clearSize.height*3)
   }
+  // 规范小数
   normalFloat(floatNumber=0, fixed=0) {
     return parseFloat(floatNumber.toFixed(fixed))
   }
+  // 计算当前缩放尺寸
   calcCurrentZoomSize(size, plus=true, step=0.010, min=0.15, max=1) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
@@ -196,9 +247,15 @@ class sbBoard {
     const _min = Math.min(this.bgObj.scaled, 1)
     return Math.max(_min, Math.min(parseFloat(size.toFixed(3)), max));
   }
+  // 计算缩放后拖拉后的差值
   calcZoomedDragoffsetDeltaSize(zoomin=true){
-    let _deltaWidth = Math.abs(this.bgObj.width*this.zoomSize-this.bgObj.width*this.oldZoomSize)/2
-    let _deltaHeight = Math.abs(this.bgObj.height*this.zoomSize-this.bgObj.height*this.oldZoomSize)/2;
+    if (!this.bgObj) {
+      return;
+    }
+    const _width = this.bgObj ? this.bgObj.width : this.options.width;
+    const _height = this.bgObj ? this.bgObj.height : this.options.height;
+    let _deltaWidth = Math.abs(_width*this.zoomSize-_width*this.oldZoomSize)/2
+    let _deltaHeight = Math.abs(_height*this.zoomSize-_height*this.oldZoomSize)/2;
     let x = 0;
     let y = 0;
     if (zoomin) {
@@ -220,7 +277,7 @@ class sbBoard {
       x: 0,
       y: 0
     }
-    this.zoomSize = this.bgObj.scaled;
+    this.zoomSize = this.bgObj ? this.bgObj.scaled : 1;
   }
   // 放大
   zoomIn(step=0.05) {
@@ -344,15 +401,18 @@ class sbBoard {
               code: 'pp',
             },
           ]
-          item.ways.forEach((val,index)=>{
-            this.controlDots.push({
-              x: val.x,
-              y: val.y,
-              cursor: 'ns-resize',
-              code: `pp`,
-              wayIndex: index
+          if (item.ways) {
+            item.ways.forEach((val,index)=>{
+              this.controlDots.push({
+                x: val.x,
+                y: val.y,
+                cursor: 'ns-resize',
+                code: `pp`,
+                wayIndex: index
+              })
             })
-          })
+          }
+          
           break;
       }
       this.sbCtx.fillStyle = '#2ac2e4';
@@ -362,10 +422,12 @@ class sbBoard {
       })
     }
   }
+  // 初始化画笔样式
   initPencilStyle() {
     this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
     this.sbCtx.lineWidth = this.options.pencilStyle.lineWidth/this.zoomSize
   }
+  // 设置draws数据(外部接口)
   setDrawsData(data) {
     this.originDraws = data 
   }
@@ -427,10 +489,12 @@ class sbBoard {
       this.sbCtx.stroke()
     }
     this.adjustmentAddon()
+    // this.drawOutsideAddon()
     
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
+  // 滚动缩放
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
     if (e.ctrlKey && Math.abs(_wheelDelta) > 0) {
@@ -443,12 +507,14 @@ class sbBoard {
     e.preventDefault()
     e.stopPropagation()
   }
+  // 侦测被选中draw
   deleteSelectedDraw() {
     if (this.selectedDraw) {
       this.originDraws.splice(this.selectedDraw.index, 1)
       this.selectedDraw = null;
     }
   }
+  // 监听键盘按键释放
   sbDomKeyup(e) {
     const keycode = e.keyCode;
     if (keycode === 32){
@@ -460,11 +526,14 @@ class sbBoard {
       return;
     }
   }
+  // 监听键盘按键按下
   sbDomKeydown(e) {
     const keycode = e.keyCode;
     if (keycode === 17 || keycode === 91) {
       // ctrl || command
-
+      e.preventDefault()
+      e.stopPropagation()
+      return;
     }
     if (keycode === 32){
       // 空格
@@ -607,6 +676,22 @@ class sbBoard {
         break;
     }
   }
+  // 单个draw整体移动
+  drawPointsWholeMove(item, x, y){
+    let _sditem = item.data;
+    let _ds = this.getDeltaSize(x, y)
+    let _item = this.originDraws[item.index];
+    _item.x = _sditem.x + _ds.width
+    _item.y = _sditem.y + _ds.height
+    // 兼容多边形
+    if(_item.ways) {
+      _item.ways.forEach((val, index)=>{
+        val['x'] = _sditem.ways[index].x + _ds.width
+        val['y'] = _sditem.ways[index].y + _ds.height
+      })
+    }
+    return _item;
+  }
   // 画笔移动事件方法
   pencilMove(e) {
     if (this.spaceBar && this.pencilPressing && this.draging) {
@@ -693,18 +778,19 @@ class sbBoard {
               }
             } else {
               // 整体移动
-              const _sditem = this.selectedDraw.data;
-              const _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
-              let _item = this.originDraws[this.selectedDraw.index];
-              _item.x = _sditem.x + _ds.width
-              _item.y = _sditem.y + _ds.height
-              // 兼容多边形
-              if(_item.ways) {
-                _item.ways.forEach((val, index)=>{
-                  val['x'] = _sditem.ways[index].x + _ds.width
-                  val['y'] = _sditem.ways[index].y + _ds.height
-                })
-              }
+              this.drawPointsWholeMove(this.selectedDraw, this.hoverPoint.x, this.hoverPoint.y)
+              // const _sditem = this.selectedDraw.data;
+              // const _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
+              // let _item = this.originDraws[this.selectedDraw.index];
+              // _item.x = _sditem.x + _ds.width
+              // _item.y = _sditem.y + _ds.height
+              // // 兼容多边形
+              // if(_item.ways) {
+              //   _item.ways.forEach((val, index)=>{
+              //     val['x'] = _sditem.ways[index].x + _ds.width
+              //     val['y'] = _sditem.ways[index].y + _ds.height
+              //   })
+              // }
             }
           }
         }
@@ -738,7 +824,7 @@ class sbBoard {
       case "pointer":
         if (this.pencilPressing ) {
           if (this.selectedDraw) {
-            const _item = this.originDraws[this.selectedDraw.index];
+            let _item = this.originDraws[this.selectedDraw.index];
             // 修正翻转调整后的坐标错误偏差
             if (this.tinkerUp) {
               switch(this.tinkerUp.code) {
@@ -772,6 +858,7 @@ class sbBoard {
                   break;
               }
             }
+            this.detectDrawIsOverSize(_item)
             this.selectedDraw.data = JSON.parse(JSON.stringify(_item));
           }
           this.pencilPressing = false;
@@ -799,11 +886,13 @@ class sbBoard {
         if (someOneRect.width > 20 || someOneRect.height > 20)  {
           // 记录已经画的rects
           someOneRect['id'] = this.generateUUID()
+          this.detectDrawIsOverSize(someOneRect)
           this.originDraws.push(someOneRect)
           this.selectedDraw = JSON.parse(JSON.stringify({
             data: this.originDraws[this.originDraws.length-1],
             index: (this.originDraws.length-1)
           }))
+          
         }
         this.setDrawType('pointer', false)
         this.pencilPosition = null;
@@ -814,19 +903,59 @@ class sbBoard {
           this.tmpPolygon['id'] = this.generateUUID()
           this.tmpPolygon['closed'] = true;
           this.pencilPosition = null;
+          this.detectDrawIsOverSize(this.tmpPolygon)
           this.originDraws.push(this.tmpPolygon)
           this.tmpPolygon = null;
           this.selectedDraw = JSON.parse(JSON.stringify({
             data: this.originDraws[this.originDraws.length-1],
             index: (this.originDraws.length-1)
           }))
-          
         } else {
           this.drawPolygon()
         }
         break;
     }
     
+  }
+  // 侦测是否超出图片范围
+  detectDrawIsOverSize(item){
+    const modifyRect = this.findOut4Poles(item)
+
+    let _item = item;
+    if ((modifyRect.x+modifyRect.width) > this.bgObj.width){
+      const _delta = Math.abs(this.bgObj.width-(modifyRect.x+modifyRect.width));
+      _item['x'] = _item.x-_delta
+      if(_item.ways) {
+        _item.ways.forEach((val, index)=>{
+          val['x'] = val.x-_delta
+        })
+      }
+    }
+    if ((modifyRect.y + modifyRect.height) > this.bgObj.height){
+      const _delta = Math.abs(this.bgObj.height-(modifyRect.y + modifyRect.height));
+      _item['y'] = _item.y-_delta
+      if(_item.ways) {
+        _item.ways.forEach((val, index)=>{
+          val['y'] = val.y-_delta
+        })
+      }
+    }
+    if (modifyRect.x<0){
+      _item['x'] = _item.x - modifyRect.x
+      if(_item.ways) {
+        _item.ways.forEach((val, index)=>{
+          val['x'] = val.x - modifyRect.x
+        })
+      }
+    }
+    if (modifyRect.y<0){
+      _item['y'] = _item.y - modifyRect.y
+      if(_item.ways) {
+        _item.ways.forEach((val, index)=>{
+          val['y'] = val.y - modifyRect.y
+        })
+      }
+    }
   }
   // 计算画笔是否在某个画图上
   calcIsOnDrawPath(x, y) {

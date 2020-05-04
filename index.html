@@ -166,7 +166,7 @@
       height: document.body.clientHeight+1
     })
     // _sbBoard.setDrawType('polygon')
-    _sbBoard.setDrawsData([{"x":2099,"y":2103,"ways":[{"x":2852,"y":1857},{"x":2384,"y":1453},{"x":2010,"y":1478}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
+    _sbBoard.setDrawsData([{"x":1532,"y":472,"ways":[{"x":2423,"y":231},{"x":1955,"y":0},{"x":1581,"y":0}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
     _sbBoard.setBackground({src:'./pcb_demo.jpg'})
     // workbenchDom.appendChild(_sbBoard.getWrapDom())
     document.body.appendChild(_sbBoard.getWrapDom())
@@ -225,12 +225,14 @@
     // })
     bindEvent('pcbBig', ()=>{
       console.log('pcbBig')
+      _sbBoard.clearWhole()
       _sbBoard.setBackground({src:'./pcb_demo.jpg'})
       _sbBoard.setDrawsData([{"x":2099,"y":2103,"ways":[{"x":2852,"y":1857},{"x":2384,"y":1453},{"x":2010,"y":1478}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0}])
       _sbBoard.zoomReset()
     })
     bindEvent('pcbSmall', ()=>{
       console.log('pcbSmall')
+      _sbBoard.clearWhole()
       _sbBoard.setBackground({src:'./pcb_small.png'})
       _sbBoard.setDrawsData([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"}])
       _sbBoard.zoomReset()
