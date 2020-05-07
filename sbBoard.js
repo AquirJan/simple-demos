@@ -85,6 +85,8 @@ class sbBoard {
     this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
     this.sbDom.addEventListener('mouseout', (e)=>this.pencilUp(e), false)
     document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
+    document.body.addEventListener('keydown', (e)=>this.sbDomKeypress(e), false)
+    
     document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
     this.sbDom.oncontextmenu = function() {
@@ -563,8 +565,143 @@ class sbBoard {
   // 侦测被选中draw
   deleteSelectedDraw() {
     if (this.selectedDraw) {
-      this.originDraws.splice(this.selectedDraw.index, 1)
+      if (this.selectedDraw.constructor === Object) {
+        this.originDraws.splice(this.selectedDraw.index, 1)
+      }
+      if (this.selectedDraw.constructor === Array) {
+        const _indexs = this.selectedDraw.map(val => val.index)
+        this.originDraws = this.originDraws.filter((val, index) => {
+          if (!_indexs.includes(index)) {
+            return val;
+          }
+        })
+      }
       this.selectedDraw = null;
+      this.modifyRect = null;
+    }
+  }
+  sbDomKeypress(e) {
+    const keycode = e.keyCode;
+    if (this.selectedDraw) {
+      let _renew_flag = true; 
+      const _stepDelta = e.shiftKey ? 10 : 1;
+      const _step = this.normalFloat(_stepDelta/this.zoomSize)
+      switch(keycode) {
+        // case 17:
+        //   e.preventDefault()
+        //   e.stopPropagation()
+        //   break;
+        case 37:
+          // 左
+          if (this.selectedDraw.constructor === Object) {
+            let _item = this.originDraws[this.selectedDraw.index]
+            _item['x'] = _item.x - _step
+            if (_item.ways) {
+              _item.ways.forEach(val=>{
+                val['x'] = val.x - _step
+              })
+            }
+          }
+          if (this.selectedDraw.constructor === Array) {
+            this.selectedDraw.forEach(val => {
+              let _item = this.originDraws[val.index]
+              _item['x'] = _item.x - _step
+              if (_item.ways) {
+                _item.ways.forEach(wval=>{
+                  wval['x'] = wval.x - _step
+                })
+              }
+            })
+          }
+          break;
+        case 39:
+          // 右
+          if (this.selectedDraw.constructor === Object) {
+            let _item = this.originDraws[this.selectedDraw.index]
+            _item['x'] = _item.x + _step
+            if (_item.ways) {
+              _item.ways.forEach(val=>{
+                val['x'] = val.x + _step
+              })
+            }
+          }
+          if (this.selectedDraw.constructor === Array) {
+            this.selectedDraw.forEach(val => {
+              let _item = this.originDraws[val.index]
+              _item['x'] = _item.x + _step
+              if (_item.ways) {
+                _item.ways.forEach(wval=>{
+                  wval['x'] = wval.x + _step
+                })
+              }
+            })
+          }
+          break;
+        case 38:
+          // 上
+          if (this.selectedDraw.constructor === Object) {
+            const _item = this.originDraws[this.selectedDraw.index]
+            _item['y'] = _item.y - _step
+            if (_item.ways) {
+              _item.ways.forEach(val=>{
+                val['y'] = val.y - _step
+              })
+            }
+          }
+          if (this.selectedDraw.constructor === Array) {
+            this.selectedDraw.forEach(val => {
+              let _item = this.originDraws[val.index]
+              _item['y'] = _item.y - _step
+              if (_item.ways) {
+                _item.ways.forEach(wval=>{
+                  wval['y'] = wval.y - _step
+                })
+              }
+            })
+          }
+          break;
+        case 40:
+          // 下
+          if (this.selectedDraw.constructor === Object) {
+            const _item = this.originDraws[this.selectedDraw.index]
+            _item['y'] = _item.y + _step
+            if (_item.ways) {
+              _item.ways.forEach(val=>{
+                val['y'] = val.y + _step
+              })
+            }
+          }
+          if (this.selectedDraw.constructor === Array) {
+            this.selectedDraw.forEach(val => {
+              let _item = this.originDraws[val.index]
+              _item['y'] = _item.y + _step
+              if (_item.ways) {
+                _item.ways.forEach(wval=>{
+                  wval['y'] = wval.y + _step
+                })
+              }
+            })
+          }
+          break;
+      }
+      if (this.selectedDraw.constructor === Object && _renew_flag) { 
+        this.selectedDraw['data'] = JSON.parse(JSON.stringify(this.originDraws[this.selectedDraw.index]))
+      }
+      if (this.selectedDraw.constructor === Array && _renew_flag) {
+        this.detectGroupDrawIsOverSize()
+        const _selectedIndex = this.selectedDraw.map(val=>val.index);
+        let _selectedOrigins =[] 
+        this.originDraws.forEach((val, index) => {
+          if (_selectedIndex.includes(index)) {
+            _selectedOrigins.push({
+              data: val,
+              index
+            })
+          }
+        });
+        this.selectedDraw = JSON.parse(JSON.stringify(_selectedOrigins));
+      }
+      
     }
   }
   // 监听键盘按键释放
@@ -577,6 +714,9 @@ class sbBoard {
       e.preventDefault()
       e.stopPropagation()
       return;
+    }
+    if (keycode === 8 || keycode === 46) {
+      this.deleteSelectedDraw()
     }
   }
   // 监听键盘按键按下
@@ -611,61 +751,7 @@ class sbBoard {
       e.stopPropagation()
       return;
     }
-    if (this.selectedDraw) {
-      const _item = this.originDraws[this.selectedDraw.index]
-      const _stepDelta = e.shiftKey ? 10 : 1;
-      const _step = this.normalFloat(_stepDelta/this.zoomSize)
-      switch(keycode) {
-        case 8:
-        case 46:
-          this.deleteSelectedDraw()
-          break;
-        // case 17:
-        //   e.preventDefault()
-        //   e.stopPropagation()
-        //   break;
-        case 37:
-          // 左
-          _item['x'] = _item.x - _step
-          if (_item.ways) {
-            _item.ways.forEach(val=>{
-              val['x'] = val.x - _step
-            })
-          }
-          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
-          break;
-        case 39:
-          // 右
-          _item['x'] = _item.x + _step
-          if (_item.ways) {
-            _item.ways.forEach(val=>{
-              val['x'] = val.x + _step
-            })
-          }
-          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
-          break;
-        case 38:
-          // 上
-          _item['y'] = _item.y - _step
-          if (_item.ways) {
-            _item.ways.forEach(val=>{
-              val['y'] = val.y - _step
-            })
-          }
-          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
-          break;
-        case 40:
-          // 下
-          _item['y'] = _item.y + _step
-          if (_item.ways) {
-            _item.ways.forEach(val=>{
-              val['y'] = val.y + _step
-            })
-          }
-          this.selectedDraw['data'] = JSON.parse(JSON.stringify(_item))
-          break;
-      }
-    }
+    
     
   }
   // 调整点的path2d
@@ -755,23 +841,27 @@ class sbBoard {
             //   return
             // }
             if (this.selectedDraw) {
-              const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
-              if (_item && this.selectedDraw.index !== _item.index) {
-                this.selectedDraw = _item
-              }
-              for(let i=0;i<this.controlDots.length;i++) {
-                const _dot = this.controlDots[i];
-                const _dotPath2d = this.drawModifyDot(_dot)
-                if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
-                  document.documentElement.style.cursor = _dot.cursor;
-                  this.tinkerUp = {code:_dot.code};
-                  if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
-                    this.tinkerUp['wayIndex'] = _dot.wayIndex
+              // 判断是否单选情况
+              if (!this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y)) {
+                const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
+                if (_item && this.selectedDraw.index !== _item.index) {
+                  this.selectedDraw = _item
+                }
+                for(let i=0;i<this.controlDots.length;i++) {
+                  const _dot = this.controlDots[i];
+                  const _dotPath2d = this.drawModifyDot(_dot)
+                  if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
+                    document.documentElement.style.cursor = _dot.cursor;
+                    this.tinkerUp = {code:_dot.code};
+                    if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
+                      this.tinkerUp['wayIndex'] = _dot.wayIndex
+                    }
+                    
+                    break;
                   }
-                  
-                  break;
                 }
               }
+              
             } else {
               this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
             }
