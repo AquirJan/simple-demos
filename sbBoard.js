@@ -933,8 +933,12 @@ class sbBoard {
                   case "br":
                     this.selectedDraw.forEach(sval => {
                       let _item = this.originDraws[sval.index];
-                      _item.height = _item.height ? sval.height + _ds.height : undefined
-                      _item.width = _item.width ? sval.width + _ds.width : undefined
+                      if (_item.height!==undefined) {
+                        _item.height = sval.data.height + _ds.height
+                      }
+                      if (_item.width!==undefined) {
+                        _item.width = sval.data.width + _ds.width
+                      }
                     })
                     
                     break;
