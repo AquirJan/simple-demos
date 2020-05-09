@@ -29,7 +29,7 @@ class sbBoard {
     this.bgObj = null;
     this.pencilPosition = null;
     this.btnScaleStep = 0.4;
-    this.drawType = 'pointer'; // rect, polygon
+    this.drawType = 'pointer'; // rect, polygon, brush, eraser
     this.tmpPolygon = null // 存放临时 polygon 对象用
     this.zoomSize = 1;
     this.oldZoomSize = 1
@@ -42,7 +42,9 @@ class sbBoard {
       x: 0,
       y: 0,
     }
-    this.modifyRect = null
+    this.modifyRect = null;
+    this.tmpPath2d = null;
+    this.tmpTotalPath2d = null;
     return this.init()
   }
   // 初始化
@@ -186,8 +188,6 @@ class sbBoard {
     
     // const _gap = 5/this.zoomSize;
     const _gap = 0;
-    this.sbCtx.setLineDash([20, 12]);
-    this.sbCtx.strokeStyle = '#f79262'
     const _x = this.modifyRect.x - _gap
     const _y = this.modifyRect.y - _gap
     const _width = this.modifyRect.width + _gap*2
@@ -198,6 +198,8 @@ class sbBoard {
     this.sbCtx.lineTo(_x+_width, _y+_height)
     this.sbCtx.lineTo(_x, _y+_height)
     this.sbCtx.closePath()
+    this.sbCtx.setLineDash([20, 12]);
+    this.sbCtx.strokeStyle = '#f79262'
     this.sbCtx.stroke()
     this.adjustmentAddon(this.modifyRect, _gap)
   }
@@ -487,10 +489,11 @@ class sbBoard {
     if (this.bgObj) {
       this.sbCtx.drawImage(this.bgObj.data, 0, 0)
     }
-    this.initPencilStyle()
+    
     this.originDraws.forEach(val => {
       switch (val.type) {
         case 'rect':
+          this.initPencilStyle()
           this.sbCtx.strokeRect(
             val.x,
             val.y,
@@ -506,6 +509,7 @@ class sbBoard {
             this.sbCtx.lineTo(wval.x, wval.y)
           })
           this.sbCtx.closePath();
+          this.initPencilStyle()
           this.sbCtx.stroke()
           break;
       }
@@ -519,6 +523,7 @@ class sbBoard {
         this.tmpRect.width,
         this.tmpRect.height,
       )
+      this.initPencilStyle()
       this.sbCtx.stroke(_tmpRect)
     }
     // 临时多边形
@@ -533,8 +538,21 @@ class sbBoard {
       } else {
         this.sbCtx.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       }
+      this.initPencilStyle()
       this.sbCtx.stroke()
     }
+    // 临时笔刷
+    if (this.tmpPath2d) {
+      this.sbCtx.lineWidth = 10/this.zoomSize;
+      this.sbCtx.strokeStyle = 'blue'
+      this.sbCtx.stroke(this.tmpPath2d)
+    }
+    // 临时所有笔刷
+    // if (this.tmpTotalPath2d) {
+    //   this.sbCtx.lineWidth = 10/this.zoomSize;
+    //   this.sbCtx.strokeStyle = 'blue'
+    //   this.sbCtx.stroke(this.tmpTotalPath2d)
+    // }
     if (this.selectedDraw) {
       if (this.selectedDraw.constructor === Object) {
         const item = this.originDraws[this.selectedDraw.index];
@@ -580,6 +598,15 @@ class sbBoard {
       this.modifyRect = null;
     }
   }
+  changeDrawPoints(index, coordinate='x', delta) {
+    let _item = this.originDraws[index]
+    _item[coordinate] = _item[coordinate] + delta
+    if (_item.ways) {
+      _item.ways.forEach(val=>{
+        val[coordinate] = val[coordinate] + delta
+      })
+    }
+  }
   sbDomKeypress(e) {
     const keycode = e.keyCode;
     if (this.selectedDraw) {
@@ -594,92 +621,44 @@ class sbBoard {
         case 37:
           // 左
           if (this.selectedDraw.constructor === Object) {
-            let _item = this.originDraws[this.selectedDraw.index]
-            _item['x'] = _item.x - _step
-            if (_item.ways) {
-              _item.ways.forEach(val=>{
-                val['x'] = val.x - _step
-              })
-            }
+            this.changeDrawPoints(this.selectedDraw.index, 'x', -_step)
           }
           if (this.selectedDraw.constructor === Array) {
             this.selectedDraw.forEach(val => {
-              let _item = this.originDraws[val.index]
-              _item['x'] = _item.x - _step
-              if (_item.ways) {
-                _item.ways.forEach(wval=>{
-                  wval['x'] = wval.x - _step
-                })
-              }
+              this.changeDrawPoints(val.index, 'x', -_step)
             })
           }
           break;
         case 39:
           // 右
           if (this.selectedDraw.constructor === Object) {
-            let _item = this.originDraws[this.selectedDraw.index]
-            _item['x'] = _item.x + _step
-            if (_item.ways) {
-              _item.ways.forEach(val=>{
-                val['x'] = val.x + _step
-              })
-            }
+            this.changeDrawPoints(this.selectedDraw.index, 'x', _step)
           }
           if (this.selectedDraw.constructor === Array) {
             this.selectedDraw.forEach(val => {
-              let _item = this.originDraws[val.index]
-              _item['x'] = _item.x + _step
-              if (_item.ways) {
-                _item.ways.forEach(wval=>{
-                  wval['x'] = wval.x + _step
-                })
-              }
+              this.changeDrawPoints(val.index, 'x', _step)
             })
           }
           break;
         case 38:
           // 上
           if (this.selectedDraw.constructor === Object) {
-            const _item = this.originDraws[this.selectedDraw.index]
-            _item['y'] = _item.y - _step
-            if (_item.ways) {
-              _item.ways.forEach(val=>{
-                val['y'] = val.y - _step
-              })
-            }
+            this.changeDrawPoints(this.selectedDraw.index, 'y', -_step)
           }
           if (this.selectedDraw.constructor === Array) {
             this.selectedDraw.forEach(val => {
-              let _item = this.originDraws[val.index]
-              _item['y'] = _item.y - _step
-              if (_item.ways) {
-                _item.ways.forEach(wval=>{
-                  wval['y'] = wval.y - _step
-                })
-              }
+              this.changeDrawPoints(val.index, 'y', -_step)
             })
           }
           break;
         case 40:
           // 下
           if (this.selectedDraw.constructor === Object) {
-            const _item = this.originDraws[this.selectedDraw.index]
-            _item['y'] = _item.y + _step
-            if (_item.ways) {
-              _item.ways.forEach(val=>{
-                val['y'] = val.y + _step
-              })
-            }
+            this.changeDrawPoints(this.selectedDraw.index, 'y', _step)
           }
           if (this.selectedDraw.constructor === Array) {
             this.selectedDraw.forEach(val => {
-              let _item = this.originDraws[val.index]
-              _item['y'] = _item.y + _step
-              if (_item.ways) {
-                _item.ways.forEach(wval=>{
-                  wval['y'] = wval.y + _step
-                })
-              }
+              this.changeDrawPoints(val.index, 'y', _step)
             })
           }
           break;
@@ -760,7 +739,7 @@ class sbBoard {
     _dotPath2d.arc(
       dot.x,
       dot.y,
-      6/this.zoomSize, 
+      4/this.zoomSize, 
       0, 
       2*Math.PI
     );
@@ -831,6 +810,10 @@ class sbBoard {
         }
         this.tinkerUp = null;
         switch (this.drawType) {
+          case "brush":
+            this.tmpPath2d = new Path2D()
+            this.tmpPath2d.moveTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+            break;
           case "pointer":
             // if (this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y)) {
             //   if (this.pencilPressing) {
@@ -842,26 +825,23 @@ class sbBoard {
             // }
             if (this.selectedDraw) {
               // 判断是否单选情况
-              if (!this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y)) {
-                const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
-                if (_item && this.selectedDraw.index !== _item.index) {
-                  this.selectedDraw = _item
-                }
-                for(let i=0;i<this.controlDots.length;i++) {
-                  const _dot = this.controlDots[i];
-                  const _dotPath2d = this.drawModifyDot(_dot)
-                  if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
-                    document.documentElement.style.cursor = _dot.cursor;
-                    this.tinkerUp = {code:_dot.code};
-                    if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
-                      this.tinkerUp['wayIndex'] = _dot.wayIndex
-                    }
-                    
-                    break;
+              const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
+              if (_item && this.selectedDraw.index !== _item.index) {
+                this.selectedDraw = _item
+              }
+              for(let i=0;i<this.controlDots.length;i++) {
+                const _dot = this.controlDots[i];
+                const _dotPath2d = this.drawModifyDot(_dot)
+                if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
+                  document.documentElement.style.cursor = _dot.cursor;
+                  this.tinkerUp = {code:_dot.code};
+                  if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
+                    this.tinkerUp['wayIndex'] = _dot.wayIndex
                   }
+                  
+                  break;
                 }
               }
-              
             } else {
               this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
             }
@@ -903,11 +883,20 @@ class sbBoard {
       y: e.offsetY,
     }
     switch (this.drawType) {
+      case "brush":
+        if (this.tmpPath2d) {
+          this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+        }
+        break;
       case "pointer":
         if (!this.pencilPressing) {
           if (!this.pencilPosition) {
             if (!this.spaceBar) {
-              document.documentElement.style.cursor = this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
+              if (this.tmpTotalPath2d) {
+                document.documentElement.style.cursor = this.sbCtx.isPointInPath(this.tmpTotalPath2d, this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
+              } else {
+                document.documentElement.style.cursor = this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
+              }
             }
             
             if (this.selectedDraw) {
@@ -926,7 +915,6 @@ class sbBoard {
             if (this.tinkerUp) {
               console.log('调整尺寸')
               // 调整尺寸
-              console.log(this.selectedDraw)
               if (this.selectedDraw.constructor === Array) {
                 const _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
                 switch(this.tinkerUp.code) {
@@ -940,7 +928,6 @@ class sbBoard {
                         _item.width = sval.data.width + _ds.width
                       }
                     })
-                    
                     break;
                   case "tl":
                     _item.height = _sditem.height - _ds.height
@@ -1003,6 +990,16 @@ class sbBoard {
       y: e.offsetY,
     }
     switch (this.drawType) {
+      case "brush":
+        if (this.tmpPath2d) {
+          this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+          if (!this.tmpTotalPath2d) {
+            this.tmpTotalPath2d = new Path2D()
+          }
+          this.tmpTotalPath2d.addPath(this.tmpPath2d)
+          this.tmpPath2d = null;
+        }
+        break;
       case "pointer":
         if (this.pencilPressing ) {
           if (this.selectedDraw) {
@@ -1308,6 +1305,169 @@ class sbBoard {
       }
     }
     return _flag;
+  }
+  blobToFile(theBlob, fileName='exportPicture.png', options={type: "image/png"}){
+    //A Blob() is almost a File() - it's just missing the two properties below which we will add
+    // theBlob.lastModifiedDate = new Date();
+    // theBlob.name = fileName;
+    // return theBlob;
+    return new File([theBlob], fileName, options);
+  }
+  b64toBlob(base64Data) {
+    let byteString = atob(base64Data.split(',')[1]);
+    let ab = new ArrayBuffer(byteString.length);
+    let ia = new Uint8Array(ab);
+
+    for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: 'image/png' });
+  }
+  exportPic(options) {
+    this.setDrawType('pointer')
+    const _options = Object.assign({}, {
+      type: 'origin', // draws, fusion
+      quality:1, 
+      width: this.sbDom.width, 
+      height: this.sbDom.height, 
+      file: {
+        name: 'exportPicture.png', 
+        options: {
+          type: "image/png"
+        }
+      }
+    }, options)
+    console.log(_options)
+    return new Promise((resolve)=> {
+      const _canvas = document.createElement('canvas');
+      if (!isNaN(_options.width) && _options.width !== this.sbDom.width && _options.height === this.sbDom.height) {
+        _options.height = this.normalFloat(_options.width / this.sbDom.width * this.sbDom.height)
+      }
+      if (!isNaN(_options.height) && _options.height !== this.sbDom.height && _options.width === this.sbDom.width) {
+        _options.width = this.normalFloat(_options.height / this.sbDom.height * this.sbDom.width)
+      }
+      const _width = _options.width
+      const _height = _options.height
+      // console.log(_width, this.sbDom.width)
+      const _zoomSize = this.normalFloat(_width/this.sbDom.width, 3)
+      // console.log(_zoomSize)
+      _canvas.width = _width
+      _canvas.height = _height
+      const _canvasCtx = _canvas.getContext('2d')
+      console.log(_options.type)
+      if (_options.type === 'draws' || _options.type === 'fusion') {
+        // 导出只有draws的图片
+        console.log(1)
+        this.originDraws.forEach(val => {
+          switch (val.type) {
+            case 'brush':
+              _canvasCtx.setLineDash([]);
+              _canvasCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+              _canvasCtx.lineWidth = this.options.pencilStyle.lineWidth
+              _canvasCtx.stroke(val.path2d)
+              break;
+            case 'rect':
+              _canvasCtx.setLineDash([]);
+              _canvasCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+              _canvasCtx.lineWidth = this.options.pencilStyle.lineWidth
+              _canvasCtx.strokeRect(
+                val.x,
+                val.y,
+                val.width,
+                val.height
+              );
+              break;
+            case "polygon":
+              _canvasCtx.beginPath();
+              _canvasCtx.moveTo(val.x, val.y)
+              val.ways.forEach(wval => {
+                _canvasCtx.lineTo(wval.x, wval.y)
+              })
+              _canvasCtx.closePath();
+              _canvasCtx.setLineDash([]);
+              _canvasCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+              _canvasCtx.lineWidth = this.options.pencilStyle.lineWidth
+              _canvasCtx.stroke()
+              break;
+          }
+        })
+      }
+      if (_options.type === 'origin' || _options.type === 'fusion') {
+        console.log(2)
+        // 导出只有底图的图片
+        _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
+      }
+      
+      const _img = _canvas.toDataURL('image/png', _options.quality)
+      
+      if (_img) {
+        if (_options.file) {
+          return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
+        }
+        console.log(4)
+        return resolve(_img)
+      }
+    })
+  }
+  // 导出只有draws的图片
+  exportDrawsPic(quality=1, file=false, width, height) {
+    this.setDrawType('pointer')
+    // 导出图片的时候需要搭建一个server服务，否则提示错误
+    return new Promise((resolve)=> {
+      const _canvas = document.createElement('canvas');
+      const _width = !isNaN(width) ? width : this.bgObj.width
+      const _height = !isNaN(height) ? height : this.bgObj.height
+      _canvas.width = _width
+      _canvas.height = _height
+      const _canvasCtx = _canvas.getContext('2d')
+      if (this.tmpTotalPath2d) {
+        _canvasCtx.lineWidth = 10/this.zoomSize;
+        _canvasCtx.strokeStyle = 'blue'
+        _canvasCtx.stroke(this.tmpTotalPath2d)
+      }
+      const _img = _canvas.toDataURL('image/png', quality)
+      if (_img) {
+        if (file) {
+          return resolve(this.blobToFile(this.b64toBlob(_img)))
+        }
+        return resolve(_img)
+      }
+    })
+  }
+  // 导出draws和底图的图片
+  exportCombinePic(quality=1, file=false) {
+    this.setDrawType('pointer')
+    // 导出图片的时候需要搭建一个server服务，否则提示错误
+    return new Promise((resolve)=> {
+      const _img = this.sbDom.toDataURL('image/png', quality)
+      if (_img) {
+        if (file) {
+          return resolve(this.blobToFile(this.b64toBlob(_img)))
+        }
+        return resolve(_img)
+      }
+    })
+  }
+  // 导出只有底图的图片
+  exportOriginPic(quality=1, file=false, width, height) {
+    this.setDrawType('pointer')
+    // 导出图片的时候需要搭建一个server服务，否则提示错误
+    return new Promise((resolve)=> {
+      const _canvas = document.createElement('canvas');
+      const _width = !isNaN(width) ? width : this.bgObj.width
+      const _height = !isNaN(height) ? height : this.bgObj.height
+      _canvas.width = _width
+      _canvas.height = _height
+      const _canvasCtx = _canvas.getContext('2d')
+      _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
+      const _img = _canvas.toDataURL('image/png', quality)
+      if (_img) {
+        if (file) {
+          return resolve(this.blobToFile(this.b64toBlob(_img)))
+        }
+        return resolve(_img)
+      }
+    })
   }
   // 计算画笔是否在modifyRect上 
   calcIsOnModifyRect(x, y){

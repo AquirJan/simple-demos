@@ -99,6 +99,11 @@
       <!-- <li class="tools-list-item">
         <button id="pointer">pointer</button>
       </li> -->
+      
+      <!-- 导出图片 -->
+      <li class="tools-list-item">
+        <button id="exportImage">exportImage</button>
+      </li>
       <!-- 获取数据 -->
       <li class="tools-list-item">
         <button id="getData">getData</button>
@@ -111,6 +116,14 @@
       <!-- <li class="tools-list-item">
         <button id="circle">circle</button>
       </li> -->
+      <!-- 笔刷 -->
+      <li class="tools-list-item">
+        <button id="brush">brush</button>
+      </li>
+      <!-- 橡皮檫 -->
+      <li class="tools-list-item">
+        <button id="eraser">eraser</button>
+      </li>
       <!-- 多边形 -->
       <li class="tools-list-item">
         <button id="polygon">polygon</button>
@@ -195,6 +208,12 @@
     //   console.log('clear whole')
     //   _sbBoard.clearWhole()
     // })
+    function loadingMask() {
+      const _mask = document.createElement('div')
+      _mask.innerText = 'Loading...';
+      _mask.style.cssText = 'top: 0;left: 0;width: 100%;height: 100%;z-index: 100;position:fixed;background-color: rgba(0,0,0,.5);color: #fff;display:flex;align-items:center;justify-content:center;'
+      return _mask
+    }
     bindEvent('zoomIn', ()=>{
       console.log('zoomIn')
       _sbBoard.zoomIn()
@@ -219,6 +238,10 @@
       console.log('polygon')
       _sbBoard.setDrawType('polygon')
     })
+    bindEvent('brush', ()=>{
+      console.log('brush')
+      _sbBoard.setDrawType('brush')
+    })
     // bindEvent('circle', ()=>{
     //   console.log('circle')
     //   _sbBoard.setDrawType('circle')
@@ -234,14 +257,32 @@
       console.log('pcbSmall')
       _sbBoard.clearWhole()
       _sbBoard.setBackground({src:'./pcb_small.png'})
-      _sbBoard.setDrawsData([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"}])
+      _sbBoard.setDrawsData([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"},{"x":193,"y":397,"ways":[{"x":149,"y":271},{"x":358,"y":222},{"x":307,"y":362},{"x":260,"y":349}],"type":"polygon","closed":true}])
       _sbBoard.zoomReset()
     })
     bindEvent('getData', ()=>{
       console.log('getData')
       console.log(JSON.stringify(_sbBoard.getDrawsData())) 
     })
-
+    bindEvent('eraser', ()=>{
+      console.log('eraser')
+      _sbBoard.setDrawType('eraser')
+    })
+    bindEvent('exportImage', ()=>{
+      const mask = loadingMask()
+      document.body.appendChild(mask)
+      console.log('exportImage')
+      const img = new Image()
+      document.body.appendChild(img)
+      // // img.src=_sbBoard.exportDrawsPic()
+      setTimeout(async ()=>{
+        const b64 = await _sbBoard.exportPic({type: 'fusion', file: false, quality: 0.4})
+        // console.log(b64)
+        img.src=b64
+        document.body.style.position = 'relative'
+        mask.remove()
+      }, 100)
+    })
     
     // const canvas = document.getElementById('canvas')
     // const image = new Image();
