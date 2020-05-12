@@ -45,6 +45,8 @@ class sbBoard {
     this.modifyRect = null;
     this.tmpPath2d = null;
     this.tmpTotalPath2d = null;
+
+    this.pencilDownFn = null;
     return this.init()
   }
   // 初始化
@@ -81,6 +83,7 @@ class sbBoard {
     this.sbWrap.appendChild(this.sbDom)
     
     this.setDrawsData(this.options.drawHistory)
+    this.setDrawType('pointer')
 
     this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
     this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
@@ -326,6 +329,83 @@ class sbBoard {
     if (this.drawType!=='pointer'){
       document.documentElement.style.cursor = 'crosshair'
     }
+    if (this.pencilDownFn) {
+      console.log('remove')
+      this.sbDom.removeEventListener('mousedown', this.pencilDownFn, false)
+      this.pencilDownFn = null;
+    }
+    this.pencilDownFn = (e)=>{
+      switch(this.drawType){
+        case "pointer":
+          this[`${this.drawType}Fn`](e)
+          break;
+      }
+    }
+    this.sbDom.addEventListener('mousedown', this.pencilDownFn, false)
+  }
+  // 指针状态事件
+  pointerFn(e){
+    if (e.button === 0) {
+      this.hoverPoint = {
+        x: e.offsetX,
+        y: e.offsetY
+      }
+      if (e.ctrlKey) {
+        if (this.selectedDraw) {
+          const _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+          if (this.selectedDraw.constructor === Array && _item) {
+            this.selectedDraw.push(JSON.parse(JSON.stringify(_item)))
+          }
+          if (this.selectedDraw.constructor === Object && _item) {
+            this.selectedDraw = [this.selectedDraw, JSON.parse(JSON.stringify(_item))]
+          }
+        }
+      }
+    } else {
+      if (this.spaceBar && !this.draging) {
+        this.pencilPressing = true;
+        this.draging = true;
+        this.dragDownPoint = {
+          x: e.offsetX - this.dragOffset.x,
+          y: e.offsetY - this.dragOffset.y
+        }
+        return;
+      }
+      this.tinkerUp = null;
+      if (this.selectedDraw) {
+        // 判断是否单选情况
+        const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
+        if (_item && this.selectedDraw.index !== _item.index) {
+          this.selectedDraw = _item
+        }
+        for(let i=0;i<this.controlDots.length;i++) {
+          const _dot = this.controlDots[i];
+          const _dotPath2d = this.drawModifyDot(_dot)
+          if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
+            document.documentElement.style.cursor = _dot.cursor;
+            this.tinkerUp = {code:_dot.code};
+            if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
+              this.tinkerUp['wayIndex'] = _dot.wayIndex
+            }
+            
+            break;
+          }
+        }
+      } else {
+        this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
+      }
+
+      if (this.selectedDraw && !this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) && !this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) && !this.tinkerUp && !this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)) {
+        this.selectedDraw = null;
+        this.modifyRect = null
+      }
+      
+      if (this.pencilPressing) {
+        return;
+      }
+      this.pencilPressing = true;
+      this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+    }
   }
   // 设定画笔点击坐标
   setPencilPosition(x, y) {
@@ -334,8 +414,8 @@ class sbBoard {
       y,
     }
   }
-  // 获取框框数据
-  getDrawsData() {
+  // 导出draws数据
+  exportDrawsData() {
     return this.originDraws.map(val=>{
       val['x'] = this.normalFloat(val.x)
       val['y'] = this.normalFloat(val.y)
@@ -492,7 +572,12 @@ class sbBoard {
     
     this.originDraws.forEach(val => {
       switch (val.type) {
-        case 'rect':
+        case "brush":
+          this.sbCtx.lineWidth = 10/this.zoomSize;
+          this.sbCtx.strokeStyle = 'blue'
+          this.sbCtx.stroke(val.path)
+          break;
+        case "rect":
           this.initPencilStyle()
           this.sbCtx.strokeRect(
             val.x,
@@ -785,19 +870,19 @@ class sbBoard {
         y: e.offsetY
       }
       if (e.ctrlKey) {
-        switch (this.drawType) {
-          case "pointer":
-            if (this.selectedDraw) {
-              const _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
-              if (this.selectedDraw.constructor === Array && _item) {
-                this.selectedDraw.push(JSON.parse(JSON.stringify(_item)))
-              }
-              if (this.selectedDraw.constructor === Object && _item) {
-                this.selectedDraw = [this.selectedDraw, JSON.parse(JSON.stringify(_item))]
-              }
-            }
-            break;
-        }
+        // switch (this.drawType) {
+        //   case "pointer":
+        //     if (this.selectedDraw) {
+        //       const _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+        //       if (this.selectedDraw.constructor === Array && _item) {
+        //         this.selectedDraw.push(JSON.parse(JSON.stringify(_item)))
+        //       }
+        //       if (this.selectedDraw.constructor === Object && _item) {
+        //         this.selectedDraw = [this.selectedDraw, JSON.parse(JSON.stringify(_item))]
+        //       }
+        //     }
+        //     break;
+        // }
       } else {
         if (this.spaceBar && !this.draging) {
           this.pencilPressing = true;
@@ -993,10 +1078,14 @@ class sbBoard {
       case "brush":
         if (this.tmpPath2d) {
           this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
-          if (!this.tmpTotalPath2d) {
-            this.tmpTotalPath2d = new Path2D()
-          }
-          this.tmpTotalPath2d.addPath(this.tmpPath2d)
+          this.originDraws.push({
+            type: 'brush',
+            path: this.tmpPath2d
+          })
+          // if (!this.tmpTotalPath2d) {
+          //   this.tmpTotalPath2d = new Path2D()
+          // }
+          // this.tmpTotalPath2d.addPath(this.tmpPath2d)
           this.tmpPath2d = null;
         }
         break;
@@ -1306,13 +1395,11 @@ class sbBoard {
     }
     return _flag;
   }
+  // blob 转成文件
   blobToFile(theBlob, fileName='exportPicture.png', options={type: "image/png"}){
-    //A Blob() is almost a File() - it's just missing the two properties below which we will add
-    // theBlob.lastModifiedDate = new Date();
-    // theBlob.name = fileName;
-    // return theBlob;
     return new File([theBlob], fileName, options);
   }
+  // base64 to blob数据
   b64toBlob(base64Data) {
     let byteString = atob(base64Data.split(',')[1]);
     let ab = new ArrayBuffer(byteString.length);
@@ -1323,13 +1410,14 @@ class sbBoard {
     }
     return new Blob([ab], { type: 'image/png' });
   }
+  // 导出图片
   exportPic(options) {
     this.setDrawType('pointer')
     const _options = Object.assign({}, {
       type: 'origin', // draws, fusion
-      quality:1, 
-      width: this.sbDom.width, 
-      height: this.sbDom.height, 
+      quality:1,
+      // width: this.bgObj ? this.bgObj.width : this.sbDom.width, 
+      // height: this.bgObj ? this.bgObj.height : this.sbDom.height, 
       file: {
         name: 'exportPicture.png', 
         options: {
@@ -1337,34 +1425,23 @@ class sbBoard {
         }
       }
     }, options)
-    console.log(_options)
     return new Promise((resolve)=> {
       const _canvas = document.createElement('canvas');
-      if (!isNaN(_options.width) && _options.width !== this.sbDom.width && _options.height === this.sbDom.height) {
-        _options.height = this.normalFloat(_options.width / this.sbDom.width * this.sbDom.height)
-      }
-      if (!isNaN(_options.height) && _options.height !== this.sbDom.height && _options.width === this.sbDom.width) {
-        _options.width = this.normalFloat(_options.height / this.sbDom.height * this.sbDom.width)
-      }
-      const _width = _options.width
-      const _height = _options.height
-      // console.log(_width, this.sbDom.width)
-      const _zoomSize = this.normalFloat(_width/this.sbDom.width, 3)
-      // console.log(_zoomSize)
-      _canvas.width = _width
-      _canvas.height = _height
+      _canvas.width = this.bgObj ? this.bgObj.width : this.sbDom.width
+      _canvas.height = this.bgObj ? this.bgObj.height : this.sbDom.height
       const _canvasCtx = _canvas.getContext('2d')
-      console.log(_options.type)
+      if (_options.type === 'origin' || _options.type === 'fusion') {
+        // 导出只有底图的图片
+        _canvasCtx.drawImage(this.bgObj.data, 0, 0, _canvas.width, _canvas.height)
+      }
       if (_options.type === 'draws' || _options.type === 'fusion') {
         // 导出只有draws的图片
-        console.log(1)
         this.originDraws.forEach(val => {
           switch (val.type) {
             case 'brush':
-              _canvasCtx.setLineDash([]);
-              _canvasCtx.strokeStyle = this.options.pencilStyle.strokeStyle
-              _canvasCtx.lineWidth = this.options.pencilStyle.lineWidth
-              _canvasCtx.stroke(val.path2d)
+              _canvasCtx.lineWidth = 10/this.zoomSize;
+              _canvasCtx.strokeStyle = 'blue'
+              _canvasCtx.stroke(val.path)
               break;
             case 'rect':
               _canvasCtx.setLineDash([]);
@@ -1392,78 +1469,12 @@ class sbBoard {
           }
         })
       }
-      if (_options.type === 'origin' || _options.type === 'fusion') {
-        console.log(2)
-        // 导出只有底图的图片
-        _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
-      }
       
       const _img = _canvas.toDataURL('image/png', _options.quality)
       
       if (_img) {
         if (_options.file) {
           return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
-        }
-        console.log(4)
-        return resolve(_img)
-      }
-    })
-  }
-  // 导出只有draws的图片
-  exportDrawsPic(quality=1, file=false, width, height) {
-    this.setDrawType('pointer')
-    // 导出图片的时候需要搭建一个server服务，否则提示错误
-    return new Promise((resolve)=> {
-      const _canvas = document.createElement('canvas');
-      const _width = !isNaN(width) ? width : this.bgObj.width
-      const _height = !isNaN(height) ? height : this.bgObj.height
-      _canvas.width = _width
-      _canvas.height = _height
-      const _canvasCtx = _canvas.getContext('2d')
-      if (this.tmpTotalPath2d) {
-        _canvasCtx.lineWidth = 10/this.zoomSize;
-        _canvasCtx.strokeStyle = 'blue'
-        _canvasCtx.stroke(this.tmpTotalPath2d)
-      }
-      const _img = _canvas.toDataURL('image/png', quality)
-      if (_img) {
-        if (file) {
-          return resolve(this.blobToFile(this.b64toBlob(_img)))
-        }
-        return resolve(_img)
-      }
-    })
-  }
-  // 导出draws和底图的图片
-  exportCombinePic(quality=1, file=false) {
-    this.setDrawType('pointer')
-    // 导出图片的时候需要搭建一个server服务，否则提示错误
-    return new Promise((resolve)=> {
-      const _img = this.sbDom.toDataURL('image/png', quality)
-      if (_img) {
-        if (file) {
-          return resolve(this.blobToFile(this.b64toBlob(_img)))
-        }
-        return resolve(_img)
-      }
-    })
-  }
-  // 导出只有底图的图片
-  exportOriginPic(quality=1, file=false, width, height) {
-    this.setDrawType('pointer')
-    // 导出图片的时候需要搭建一个server服务，否则提示错误
-    return new Promise((resolve)=> {
-      const _canvas = document.createElement('canvas');
-      const _width = !isNaN(width) ? width : this.bgObj.width
-      const _height = !isNaN(height) ? height : this.bgObj.height
-      _canvas.width = _width
-      _canvas.height = _height
-      const _canvasCtx = _canvas.getContext('2d')
-      _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
-      const _img = _canvas.toDataURL('image/png', quality)
-      if (_img) {
-        if (file) {
-          return resolve(this.blobToFile(this.b64toBlob(_img)))
         }
         return resolve(_img)
       }
