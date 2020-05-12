@@ -8,7 +8,9 @@ class sbBoard {
       drawHistory: [],
       pencilStyle: {
         strokeStyle: '#333',
-        lineWidth: 2
+        lineWidth: 2,
+        brushSize: 50,
+        brushColor: 'blue'
       }
     }, options);
     this.sbCtx = null;
@@ -84,6 +86,7 @@ class sbBoard {
     this.sbWrap.appendChild(this.sbDom)
     
     this.setDrawsData(this.options.drawHistory)
+    this.setDrawType('pointer')
 
     this.sbDom.addEventListener('mousedown', (e)=>this.pencilDown(e), false)
     this.sbDom.addEventListener('mousemove', (e)=>this.pencilMove(e), false)
@@ -476,6 +479,14 @@ class sbBoard {
     this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
     this.sbCtx.lineWidth = this.options.pencilStyle.lineWidth/this.zoomSize
   }
+  setBrushStyle(size, color) {
+    if (size){
+      this.options.pencilStyle['brushSize'] = size
+    }
+    if (color) {
+      this.options.pencilStyle['brushColor'] = color
+    }
+  }
   // 设置draws数据(外部接口)
   setDrawsData(data) {
     this.originDraws = data 
@@ -494,8 +505,8 @@ class sbBoard {
     this.originDraws.forEach(val => {
       switch (val.type) {
         case "brush":
-          this.sbCtx.lineWidth = 100;
-          this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+          this.sbCtx.lineWidth = this.options.pencilStyle.brushSize;
+          this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
           this.sbCtx.stroke(val.path)
           break;
         case 'rect':
@@ -549,8 +560,8 @@ class sbBoard {
     }
     // 临时笔刷
     if (this.tmpPath2d) {
-      this.sbCtx.lineWidth = 100;
-      this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+      this.sbCtx.lineWidth = this.options.pencilStyle.brushSize;
+      this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
       this.sbCtx.stroke(this.tmpPath2d)
     }
     if (this.selectedDraw) {
@@ -1390,8 +1401,8 @@ class sbBoard {
         this.originDraws.forEach(val => {
           switch (val.type) {
             case 'brush':
-              _canvasCtx.lineWidth = 100
-              _canvasCtx.strokeStyle = this.options.pencilStyle.strokeStyle
+              _canvasCtx.lineWidth = this.options.pencilStyle.brushSize;
+              _canvasCtx.strokeStyle = this.options.pencilStyle.brushColor
               _canvasCtx.stroke(val.path)
               break;
             case 'rect':
