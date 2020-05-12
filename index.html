@@ -155,7 +155,7 @@
     </ul>
   </div>
   <script>
-    new mousePosition()
+    // new mousePosition()
 
     function bindEvent(btnId, cb) {
       const restoreBtn = document.getElementById(btnId)
@@ -262,7 +262,7 @@
     })
     bindEvent('getData', ()=>{
       console.log('getData')
-      console.log(JSON.stringify(_sbBoard.getDrawsData())) 
+      console.log(JSON.stringify(_sbBoard.exportDrawsData())) 
     })
     bindEvent('eraser', ()=>{
       console.log('eraser')
@@ -272,13 +272,15 @@
       const mask = loadingMask()
       document.body.appendChild(mask)
       console.log('exportImage')
-      const img = new Image()
-      document.body.appendChild(img)
+      
       // // img.src=_sbBoard.exportDrawsPic()
       setTimeout(async ()=>{
-        const b64 = await _sbBoard.exportPic({type: 'fusion', file: false, quality: 0.4})
+        const b64 = await _sbBoard.exportPic({type: 'origin', file: false, quality: 0.4})
         // console.log(b64)
+        const img = new Image()
+        document.body.appendChild(img)
         img.src=b64
+        img.style.cssText="display:block;width:100%"
         document.body.style.position = 'relative'
         mask.remove()
       }, 100)
