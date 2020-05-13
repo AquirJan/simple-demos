@@ -8,7 +8,9 @@ class sbBoard {
       drawHistory: [],
       pencilStyle: {
         strokeStyle: '#333',
-        lineWidth: 2
+        lineWidth: 2,
+        brushSize: 50,
+        brushColor: 'blue'
       }
     }, options);
     this.sbCtx = null;
@@ -37,6 +39,9 @@ class sbBoard {
     this.controlDots = []
     this.selectedDraw = null;
     this.spaceBar = false;
+    this.shiftKey = false;
+    this.ctrlKey = false;
+    this.altKey = false;
     this.draging = false;
     this.hoverPoint = {
       x: 0,
@@ -90,8 +95,6 @@ class sbBoard {
     this.sbDom.addEventListener('mouseup', (e)=>this.pencilUp(e), false)
     this.sbDom.addEventListener('mouseout', (e)=>this.pencilUp(e), false)
     document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
-    document.body.addEventListener('keydown', (e)=>this.sbDomKeypress(e), false)
-    
     document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
     this.sbDom.oncontextmenu = function() {
@@ -555,6 +558,14 @@ class sbBoard {
     this.sbCtx.strokeStyle = this.options.pencilStyle.strokeStyle
     this.sbCtx.lineWidth = this.options.pencilStyle.lineWidth/this.zoomSize
   }
+  setBrushStyle(size, color) {
+    if (size){
+      this.options.pencilStyle['brushSize'] = size
+    }
+    if (color) {
+      this.options.pencilStyle['brushColor'] = color
+    }
+  }
   // 设置draws数据(外部接口)
   setDrawsData(data) {
     this.originDraws = data 
@@ -573,11 +584,11 @@ class sbBoard {
     this.originDraws.forEach(val => {
       switch (val.type) {
         case "brush":
-          this.sbCtx.lineWidth = 10/this.zoomSize;
-          this.sbCtx.strokeStyle = 'blue'
+          this.sbCtx.lineWidth = this.options.pencilStyle.brushSize;
+          this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
           this.sbCtx.stroke(val.path)
           break;
-        case "rect":
+        case 'rect':
           this.initPencilStyle()
           this.sbCtx.strokeRect(
             val.x,
@@ -628,16 +639,10 @@ class sbBoard {
     }
     // 临时笔刷
     if (this.tmpPath2d) {
-      this.sbCtx.lineWidth = 10/this.zoomSize;
-      this.sbCtx.strokeStyle = 'blue'
+      this.sbCtx.lineWidth = this.options.pencilStyle.brushSize;
+      this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
       this.sbCtx.stroke(this.tmpPath2d)
     }
-    // 临时所有笔刷
-    // if (this.tmpTotalPath2d) {
-    //   this.sbCtx.lineWidth = 10/this.zoomSize;
-    //   this.sbCtx.strokeStyle = 'blue'
-    //   this.sbCtx.stroke(this.tmpTotalPath2d)
-    // }
     if (this.selectedDraw) {
       if (this.selectedDraw.constructor === Object) {
         const item = this.originDraws[this.selectedDraw.index];
@@ -655,7 +660,7 @@ class sbBoard {
   // 滚动缩放
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
-    if (e.ctrlKey && Math.abs(_wheelDelta) > 0) {
+    if (this.ctrlKey && Math.abs(_wheelDelta) > 0) {
       if (_wheelDelta > 0) {
         this.zoomIn(0.010)
       } else {
@@ -692,17 +697,92 @@ class sbBoard {
       })
     }
   }
-  sbDomKeypress(e) {
+  // 监听键盘按键释放
+  sbDomKeyup(e) {
     const keycode = e.keyCode;
+    if (keycode === 32){
+      // 空格
+      this.spaceBar = false;
+      document.documentElement.style.cursor = 'default'
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if ( keycode === 18 ) {
+      // alt
+      this.altKey = false;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if ( keycode === 17 ) {
+      // ctrl || command 91
+      this.ctrlKey = false;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if ( keycode === 16 ) {
+      // ctrl
+      this.shiftKey = false;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if (keycode === 8 || keycode === 46) {
+      this.deleteSelectedDraw()
+    }
+  }
+  // 监听键盘按键按下
+  sbDomKeydown(e) {
+    const keycode = e.keyCode;
+    // console.log(keycode)
+    if ( keycode === 18 ) {
+      // shift
+      this.altKey = true;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if ( keycode === 16 ) {
+      // shift
+      this.shiftKey = true;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if (keycode === 17 ) {
+      // ctrl || command 91
+      this.ctrlKey = true;
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
+    if (keycode === 27) {
+      // esc
+      this.selectedDraw = null;
+      if (this.drawType !== 'pointer') {
+        this.modifyRect = null;
+        this.tmpPolygon = null;
+        this.tmpRect = null;
+        this.drawType = 'pointer'
+        document.documentElement.style.cursor = 'default'
+      }
+      return;
+    }
+    if (keycode === 32){
+      // 空格
+      this.spaceBar = true;
+      document.documentElement.style.cursor = 'grabbing'
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
     if (this.selectedDraw) {
       let _renew_flag = true; 
       const _stepDelta = e.shiftKey ? 10 : 1;
       const _step = this.normalFloat(_stepDelta/this.zoomSize)
       switch(keycode) {
-        // case 17:
-        //   e.preventDefault()
-        //   e.stopPropagation()
-        //   break;
         case 37:
           // 左
           if (this.selectedDraw.constructor === Object) {
@@ -767,55 +847,6 @@ class sbBoard {
       }
       
     }
-  }
-  // 监听键盘按键释放
-  sbDomKeyup(e) {
-    const keycode = e.keyCode;
-    if (keycode === 32){
-      // 空格
-      this.spaceBar = false;
-      document.documentElement.style.cursor = 'default'
-      e.preventDefault()
-      e.stopPropagation()
-      return;
-    }
-    if (keycode === 8 || keycode === 46) {
-      this.deleteSelectedDraw()
-    }
-  }
-  // 监听键盘按键按下
-  sbDomKeydown(e) {
-    const keycode = e.keyCode;
-    // console.log(keycode)
-    // if (keycode === 17 || keycode === 91) {
-    //   // ctrl || command
-    //   e.preventDefault()
-    //   e.stopPropagation()
-    //   return;
-    // }
-    if (keycode === 27) {
-      // esc
-      this.selectedDraw = null;
-      if (this.drawType !== 'pointer') {
-        
-        this.modifyRect = null;
-        this.tmpPolygon = null;
-        this.tmpRect = null;
-        this.drawType = 'pointer'
-        document.documentElement.style.cursor = 'default'
-      }
-     
-      return;
-    }
-    if (keycode === 32){
-      // 空格
-      this.spaceBar = true;
-      document.documentElement.style.cursor = 'grabbing'
-      e.preventDefault()
-      e.stopPropagation()
-      return;
-    }
-    
     
   }
   // 调整点的path2d
@@ -869,20 +900,20 @@ class sbBoard {
         x: e.offsetX,
         y: e.offsetY
       }
-      if (e.ctrlKey) {
-        // switch (this.drawType) {
-        //   case "pointer":
-        //     if (this.selectedDraw) {
-        //       const _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
-        //       if (this.selectedDraw.constructor === Array && _item) {
-        //         this.selectedDraw.push(JSON.parse(JSON.stringify(_item)))
-        //       }
-        //       if (this.selectedDraw.constructor === Object && _item) {
-        //         this.selectedDraw = [this.selectedDraw, JSON.parse(JSON.stringify(_item))]
-        //       }
-        //     }
-        //     break;
-        // }
+      if (this.ctrlKey) {
+        switch (this.drawType) {
+          case "pointer":
+            if (this.selectedDraw) {
+              const _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+              if (this.selectedDraw.constructor === Array && _item) {
+                this.selectedDraw.push(JSON.parse(JSON.stringify(_item)))
+              }
+              if (this.selectedDraw.constructor === Object && _item) {
+                this.selectedDraw = [this.selectedDraw, JSON.parse(JSON.stringify(_item))]
+              }
+            }
+            break;
+        }
       } else {
         if (this.spaceBar && !this.draging) {
           this.pencilPressing = true;
@@ -998,16 +1029,18 @@ class sbBoard {
         } else {
           if (this.selectedDraw) {
             if (this.tinkerUp) {
-              console.log('调整尺寸')
+              // console.log('调整尺寸')
               // 调整尺寸
               if (this.selectedDraw.constructor === Array) {
-                const _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
+                let _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
+                
                 switch(this.tinkerUp.code) {
                   case "br":
                     this.selectedDraw.forEach(sval => {
                       let _item = this.originDraws[sval.index];
                       if (_item.height!==undefined) {
                         _item.height = sval.data.height + _ds.height
+                        _item.y = sval.data.y + _ds.height;
                       }
                       if (_item.width!==undefined) {
                         _item.width = sval.data.width + _ds.width
@@ -1082,10 +1115,6 @@ class sbBoard {
             type: 'brush',
             path: this.tmpPath2d
           })
-          // if (!this.tmpTotalPath2d) {
-          //   this.tmpTotalPath2d = new Path2D()
-          // }
-          // this.tmpTotalPath2d.addPath(this.tmpPath2d)
           this.tmpPath2d = null;
         }
         break;
@@ -1221,6 +1250,7 @@ class sbBoard {
     // 调整尺寸
     const _sditem = sdItem.data;
     const _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
+    
     let _item = this.originDraws[sdItem.index];
     switch(this.tinkerUp.code) {
       case "bm":
@@ -1230,7 +1260,7 @@ class sbBoard {
         _item.width = _sditem.width + _ds.width
         break;
       case "br":
-        _item.height = _sditem.height + _ds.height
+        _item.height = this.shiftKey ? _sditem.width + _ds.width : _sditem.height + _ds.height
         _item.width = _sditem.width + _ds.width
         break;
       case "tm":
@@ -1271,6 +1301,9 @@ class sbBoard {
   // 侦测draw组是否超出底图范围
   detectGroupDrawIsOverSize() {
     const modifyRect = this.modifyRect;
+    if (!modifyRect) {
+      return;
+    }
     if ((modifyRect.x+modifyRect.width) > this.bgObj.width){
       const _delta = Math.abs(this.bgObj.width-(modifyRect.x+modifyRect.width));
       this.selectedDraw.forEach(sval => {
@@ -1415,9 +1448,9 @@ class sbBoard {
     this.setDrawType('pointer')
     const _options = Object.assign({}, {
       type: 'origin', // draws, fusion
-      quality:1,
-      // width: this.bgObj ? this.bgObj.width : this.sbDom.width, 
-      // height: this.bgObj ? this.bgObj.height : this.sbDom.height, 
+      quality:1, 
+      // width: this.sbDom.width, 
+      // height: this.sbDom.height, 
       file: {
         name: 'exportPicture.png', 
         options: {
@@ -1427,20 +1460,31 @@ class sbBoard {
     }, options)
     return new Promise((resolve)=> {
       const _canvas = document.createElement('canvas');
-      _canvas.width = this.bgObj ? this.bgObj.width : this.sbDom.width
-      _canvas.height = this.bgObj ? this.bgObj.height : this.sbDom.height
+      // if (!isNaN(_options.width) && _options.width !== this.sbDom.width && _options.height === this.sbDom.height) {
+      //   _options.height = this.normalFloat(_options.width / this.sbDom.width * this.sbDom.height)
+      // }
+      // if (!isNaN(_options.height) && _options.height !== this.sbDom.height && _options.width === this.sbDom.width) {
+      //   _options.width = this.normalFloat(_options.height / this.sbDom.height * this.sbDom.width)
+      // }
+      const _width = this.bgObj ? this.bgObj.width : this.sbDom.width
+      const _height = this.bgObj ? this.bgObj.height : this.sbDom.height
+      // console.log(_width, this.sbDom.width)
+      // const _zoomSize = this.normalFloat(_width/this.sbDom.width, 3)
+      // console.log(_zoomSize)
+      _canvas.width = _width
+      _canvas.height = _height
       const _canvasCtx = _canvas.getContext('2d')
       if (_options.type === 'origin' || _options.type === 'fusion') {
         // 导出只有底图的图片
-        _canvasCtx.drawImage(this.bgObj.data, 0, 0, _canvas.width, _canvas.height)
+        _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
       }
       if (_options.type === 'draws' || _options.type === 'fusion') {
         // 导出只有draws的图片
         this.originDraws.forEach(val => {
           switch (val.type) {
             case 'brush':
-              _canvasCtx.lineWidth = 10/this.zoomSize;
-              _canvasCtx.strokeStyle = 'blue'
+              _canvasCtx.lineWidth = this.options.pencilStyle.brushSize;
+              _canvasCtx.strokeStyle = this.options.pencilStyle.brushColor
               _canvasCtx.stroke(val.path)
               break;
             case 'rect':
@@ -1470,12 +1514,14 @@ class sbBoard {
         })
       }
       
+      
       const _img = _canvas.toDataURL('image/png', _options.quality)
       
       if (_img) {
         if (_options.file) {
           return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
         }
+        console.log(4)
         return resolve(_img)
       }
     })
