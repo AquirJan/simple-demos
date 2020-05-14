@@ -50,6 +50,7 @@ class sbBoard {
       y: 0,
     }
     this.modifyRect = null;
+    this.lockModifyRect = null;
     this.tmpPath2d = null;
     this.tmpTotalPath2d = null;
 
@@ -139,7 +140,7 @@ class sbBoard {
         this.sbDom.height = this.bgObj.viewHeight
       }
     } else {
-      this.sbCtx.fillStyle = _obj.color
+      this.sbCtx.fillStyle = _obj.fillStyle
       this.zoomSize = 1;
     }
   }
@@ -195,8 +196,12 @@ class sbBoard {
   // 框框外部调整控制器
   drawOutsideAddon(){
     const _selectedIndex = this.selectedDraw.map(val=>val.index);
+    let _canAdjust = true;
     let _selectedOrigins = this.originDraws.filter((val, index) => {
       if (_selectedIndex.includes(index)) {
+        if (val.type !== 'rect') {
+          _canAdjust = false;
+        }
         return val
       }
     });
@@ -219,7 +224,10 @@ class sbBoard {
     this.sbCtx.strokeStyle = '#f79262'
     this.sbCtx.stroke()
     this.sbCtx.setLineDash([]);
-    this.adjustmentAddon(this.modifyRect, _gap)
+    // 多draws调整大小
+    // if (_canAdjust) {
+    //   this.adjustmentAddon(this.modifyRect, _gap)
+    // }
   }
   // 加载图promise
   asyncLoadImage(src) {
@@ -397,9 +405,11 @@ class sbBoard {
         this.tinkerUp = null;
         if (this.selectedDraw) {
           // 判断是否单选情况
-          const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
-          if (_item && this.selectedDraw.index !== _item.index) {
-            this.selectedDraw = _item
+          if (this.selectedDraw.constructor === Object) {
+            const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
+            if (_item && this.selectedDraw.index !== _item.index) {
+              this.selectedDraw = _item
+            }
           }
           for(let i=0;i<this.controlDots.length;i++) {
             const _dot = this.controlDots[i];
@@ -410,7 +420,7 @@ class sbBoard {
               if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
                 this.tinkerUp['wayIndex'] = _dot.wayIndex
               }
-              
+              this.lockModifyRect = JSON.parse(JSON.stringify(this.modifyRect))
               break;
             }
           }
@@ -469,35 +479,41 @@ class sbBoard {
           // 调整尺寸
           if (this.selectedDraw.constructor === Array) {
             let _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
-            
             switch(this.tinkerUp.code) {
               case "br":
                 this.selectedDraw.forEach(sval => {
-                  let _item = this.originDraws[sval.index];
-                  if (_item.height!==undefined) {
-                    _item.height = sval.data.height + _ds.height
-                    _item.y = sval.data.y + _ds.height;
-                  }
-                  if (_item.width!==undefined) {
-                    _item.width = sval.data.width + _ds.width
+                  if (sval.data.type === 'rect') {
+                    let _item = this.originDraws[sval.index];
+                    if (_item.height!==undefined) {
+                      _item.height = sval.data.height + _ds.height*sval.data.height/this.lockModifyRect.height
+                    }
+                    if (this.lockModifyRect.y !== _item.y) {
+                      _item.y = sval.data.y + _ds.height*sval.data.y/this.lockModifyRect.y;
+                    }
+                    if (_item.width!==undefined) {
+                      _item.width = sval.data.width + _ds.width*sval.data.width/this.lockModifyRect.width
+                    }
+                    if (this.lockModifyRect.x !== _item.x) {
+                      _item.x = sval.data.x + _ds.width*sval.data.x/this.lockModifyRect.x;
+                    }
                   }
                 })
                 break;
               case "tl":
-                _item.height = _sditem.height - _ds.height
-                _item.y = _sditem.y + _ds.height
-                _item.width = _sditem.width - _ds.width
-                _item.x = _sditem.x + _ds.width
+                // _item.height = _sditem.height - _ds.height
+                // _item.y = _sditem.y + _ds.height
+                // _item.width = _sditem.width - _ds.width
+                // _item.x = _sditem.x + _ds.width
                 break;
               case "tr":
-                _item.width = _sditem.width + _ds.width
-                _item.height = _sditem.height - _ds.height
-                _item.y = _sditem.y + _ds.height
+                // _item.width = _sditem.width + _ds.width
+                // _item.height = _sditem.height - _ds.height
+                // _item.y = _sditem.y + _ds.height
                 break;
               case "bl":
-                _item.height = _sditem.height + _ds.height
-                _item.width = _sditem.width - _ds.width
-                _item.x = _sditem.x + _ds.width
+                // _item.height = _sditem.height + _ds.height
+                // _item.width = _sditem.width - _ds.width
+                // _item.x = _sditem.x + _ds.width
                 break;
             }
           }
@@ -515,6 +531,11 @@ class sbBoard {
             })
           }
         }
+      } else {
+        this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
+        this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)'
+        this.tmpRect['strokeStyle'] = 'transparent'
+        this.tmpRect['lineWidth'] =  1
       }
     }
   }
@@ -583,6 +604,13 @@ class sbBoard {
             }
           });
           this.selectedDraw = JSON.parse(JSON.stringify(_selectedOrigins));
+        }
+      } else {
+        if (this.tmpRect) {
+          // 检测有哪些draw在框选框内
+          this.selectedDraw = this.detectDrawsOver()
+          console.log(this.selectedDraw)
+          this.tmpRect = null;
         }
       }
       this.pencilPressing = false;
@@ -770,6 +798,26 @@ class sbBoard {
       y,
     }
   }
+  // 检测有哪些draw在框选框内
+  detectDrawsOver(){
+    let tmp_selectedDraw = []
+    if (this.tmpRect && this.originDraws && this.originDraws.constructor === Array && this.originDraws.length) {
+      this.originDraws.forEach((val, index) => {
+        if (val.type === 'rect') {
+          if (val.x >= this.tmpRect.x && (this.tmpRect.x+this.tmpRect.width)>=(val.x+val.width) && val.y >= this.tmpRect.y && (this.tmpRect.y+this.tmpRect.height)>=(val.y+val.height)) {
+            tmp_selectedDraw.push({data:val, index:index});
+          }
+        }
+        if (val.type === 'polygon') {
+          const _modifyRect = this.findOut4Poles(val, true)
+          if (_modifyRect.x >= this.tmpRect.x && (this.tmpRect.x+this.tmpRect.width)>=(_modifyRect.x+_modifyRect.width) && _modifyRect.y >= this.tmpRect.y && (this.tmpRect.y+this.tmpRect.height)>=(_modifyRect.y+_modifyRect.height)) {
+            tmp_selectedDraw.push({data:val, index:index});
+          }
+        }
+      })
+    }
+    return JSON.parse(JSON.stringify(tmp_selectedDraw))
+  }
   // 导出draws数据
   exportDrawsData() {
     return this.originDraws.filter(val=>{
@@ -790,10 +838,11 @@ class sbBoard {
   }
   // 获取起点与终点之间的尺寸
   getDeltaSize(x, y) {
-    return {
+    let _deltas = {
       width : (x - this.pencilPosition.x)/this.zoomSize, 
       height: (y - this.pencilPosition.y)/this.zoomSize 
     }
+    return _deltas;
   }
   // 调整框框插件
   adjustmentAddon(item, gap=0) {
@@ -908,10 +957,11 @@ class sbBoard {
     })
   }
   // 初始化画笔样式
-  initPencilStyle(color, size) {
+  initPencilStyle(stroke, size, fill) {
     // this.sbCtx.setLineDash([]);
-    this.sbCtx.strokeStyle = color ? color : this.options.pencilStyle.strokeStyle
-    this.sbCtx.lineWidth = ( size ? size : this.options.pencilStyle.lineWidth ) / this.zoomSize
+    this.sbCtx.strokeStyle = stroke !== undefined ? stroke : this.options.pencilStyle.strokeStyle
+    this.sbCtx.lineWidth = ( size !== undefined ? size : this.options.pencilStyle.lineWidth ) / this.zoomSize
+    this.sbCtx.fillStyle = fill !== undefined ? fill : 'transparent'
   }
   setBrushStyle(size, color) {
     if (size){
@@ -969,7 +1019,7 @@ class sbBoard {
     this.originDraws.forEach(val => {
       switch (val.type) {
         case 'rect':
-          this.initPencilStyle(val.color, val.lineWidth)
+          this.initPencilStyle(val.strokeStyle, val.lineWidth)
           this.sbCtx.strokeRect(
             val.x,
             val.y,
@@ -985,7 +1035,7 @@ class sbBoard {
             this.sbCtx.lineTo(wval.x, wval.y)
           })
           this.sbCtx.closePath();
-          this.initPencilStyle(val.color, val.lineWidth)
+          this.initPencilStyle(val.strokeStyle, val.lineWidth)
           this.sbCtx.stroke()
           break;
       }
@@ -999,8 +1049,11 @@ class sbBoard {
         this.tmpRect.width,
         this.tmpRect.height,
       )
-      this.initPencilStyle(this.tmpRect.color, this.tmpRect.lineWidth)
-      this.sbCtx.stroke(_tmpRect)
+      this.initPencilStyle(this.tmpRect.strokeStyle, this.tmpRect.lineWidth, this.tmpRect.fillStyle)
+      if (this.tmpRect.fillStyle) {
+        this.sbCtx.fill(_tmpRect);
+      }
+      this.sbCtx.stroke(_tmpRect);
     }
     // 临时多边形
     if (this.tmpPolygon) {
@@ -1014,7 +1067,7 @@ class sbBoard {
       } else {
         this.sbCtx.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       }
-      this.initPencilStyle(this.tmpPolygon.color, this.tmpPolygon.lineWidth)
+      this.initPencilStyle(this.tmpPolygon.strokeStyle, this.tmpPolygon.lineWidth)
       this.sbCtx.stroke()
     }
     
@@ -1042,9 +1095,9 @@ class sbBoard {
     const _wheelDelta = e.wheelDelta;
     if (this.ctrlKey && Math.abs(_wheelDelta) > 0) {
       if (_wheelDelta > 0) {
-        this.zoomIn(0.010)
+        this.zoomIn(0.020)
       } else {
-        this.zoomOut(0.010)
+        this.zoomOut(0.020)
       }
     }
     e.preventDefault()
@@ -1509,7 +1562,7 @@ class sbBoard {
           this.originDraws.forEach(val => {
             switch (val.type) {
               case 'rect':
-                _canvasCtx.strokeStyle = val.color ? val.color : this.options.pencilStyle.strokeStyle
+                _canvasCtx.strokeStyle = val.strokeStyle ? val.strokeStyle : this.options.pencilStyle.strokeStyle
                 _canvasCtx.lineWidth = val.lineWidth ? val.lineWidth : this.options.pencilStyle.lineWidth
                 _canvasCtx.strokeRect(
                   val.x,
