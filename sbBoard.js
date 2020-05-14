@@ -816,6 +816,9 @@ class sbBoard {
         }
       })
     }
+    if (tmp_selectedDraw.length === 1) {
+      tmp_selectedDraw = tmp_selectedDraw[0]
+    }
     return JSON.parse(JSON.stringify(tmp_selectedDraw))
   }
   // 导出draws数据
