@@ -978,6 +978,41 @@ class sbBoard {
   setDrawsData(data) {
     this.originDraws = data 
   }
+  // 绘制标签
+  labelRect(rect) {
+    if (rect.label && rect.width > 50/this.zoomSize) {
+      this.sbCtx.fillStyle = rect.strokeStyle
+      const _fontSize = 14;
+      const _width = rect.width/2
+      const _height = 20/this.zoomSize;
+      const _fontOriginSize = _fontSize/this.zoomSize
+      const _x = rect.x+_width;
+      const _paddingLeft = 2/this.zoomSize;
+      const _fx = _x + _paddingLeft
+      const _y = rect.y+(_fontSize+2)/this.zoomSize
+      this.sbCtx.fillRect(_x, rect.y, _width, _height);
+
+      this.sbCtx.font=`${_fontOriginSize}px Arial`;
+      this.sbCtx.fillStyle = "#fff"
+      this.sbCtx.fillText(this.fittingString(this.sbCtx, rect.label, _width-_paddingLeft), _fx, _y);
+    }
+  }
+  // 重组显示文字
+  fittingString(_ctx, str, maxWidth) {
+    let strWidth = _ctx.measureText(str).width;
+    const ellipsis = '…';
+    const ellipsisWidth = _ctx.measureText(ellipsis).width;
+    if (strWidth <= maxWidth || maxWidth <= ellipsisWidth) {
+      return '.';
+    } else {
+      var len = str.length;
+      while (strWidth >= maxWidth - ellipsisWidth && len-- > 0) {
+        str = str.slice(0, len);
+        strWidth = _ctx.measureText(str).width;
+      }
+      return str + ellipsis;
+    }
+  }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
@@ -1004,7 +1039,7 @@ class sbBoard {
           break;
       }
     });
-    // 临时笔刷
+    // // 临时笔刷
     if (this.tmpPath2d) {
       if (this.drawType === 'eraser') {
         this.sbCtx.globalCompositeOperation = "destination-out";
@@ -1029,6 +1064,9 @@ class sbBoard {
             val.width,
             val.height
           );
+          if (val.label){
+            this.labelRect(val);
+          }
           break;
         case "polygon":
           this.sbCtx.strokeStyle = 'red'
