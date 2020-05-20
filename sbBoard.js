@@ -1,4 +1,4 @@
-class sbBoard {
+export default class sbBoard {
   constructor(options) {
     this.options = Object.assign({
       width: window.innerWidth,
@@ -369,10 +369,11 @@ class sbBoard {
     }
     if (this.pencilUpFn) {
       this.sbDom.removeEventListener('mouseup', this.pencilUpFn, false)
+      this.sbDom.removeEventListener('mouseout', this.pencilUpFn, false)
       this.pencilUpFn = null;
     }
-    if (this.drawType !== 'pointer' && !this.isObserver) {
-      return;
+    if (this.drawType !== 'pointer' && this.isObserver) {
+      return false;
     }
     if (this[`${this.drawType}DownFn`]) {
       this.pencilDownFn = (e)=>this[`${this.drawType}DownFn`](e)
@@ -502,6 +503,7 @@ class sbBoard {
           // console.log('调整尺寸')
           // 调整尺寸
           if (this.selectedDraw.constructor === Array) {
+            console.log('delta 1')
             let _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
             switch(this.tinkerUp.code) {
               case "br":
@@ -556,6 +558,7 @@ class sbBoard {
           }
         }
       } else {
+        console.log('drawrect 1')
         this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
         this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)'
         this.tmpRect['strokeStyle'] = 'transparent'
@@ -658,6 +661,7 @@ class sbBoard {
     }
   }
   rectMoveFn(e) {
+    console.log(111)
     if (!this.pencilPressing) {
       return;
     }
@@ -668,6 +672,10 @@ class sbBoard {
     this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
   }
   rectUpFn(e) {
+    console.log(34)
+    if (!this.pencilPressing) {
+      return;
+    }
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
@@ -736,7 +744,6 @@ class sbBoard {
       }))
     } else {
       this.drawPolygon()
-      console.log(this.tmpPolygon)
     }
   }
   // 笔刷事件
@@ -1733,7 +1740,6 @@ class sbBoard {
         if (_options.file) {
           return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
         }
-        console.log(4)
         return resolve(_img)
       }
     })
