@@ -179,7 +179,7 @@
         brushSize: 50,
         brushColor: 'green'
       },
-      drawHistory: [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":"看得见覅akdf"},{"x":2492,"y":1415,"ways":[{"x":2383,"y":1302},{"x":2258,"y":1427}],"type":"polygon","closed":true, "label":"看得见覅akdf"},{"x":1730,"y":1222,"width":246,"height":214,"type":"rect"}],
+      drawHistory: [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":""}],
       width: workbenchRect.width,
       height: workbenchRect.height
       // width: document.body.clientWidth,
@@ -188,8 +188,8 @@
     // _sbBoard.setDrawType('polygon')
     // _sbBoard.setDrawsData([{"x":1532,"y":472,"ways":[{"x":2423,"y":231},{"x":1955,"y":0},{"x":1581,"y":0}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
     _sbBoard.setBackground({src:'./pcb_demo.jpg'})
-    _sbBoard.setExistBrush({src:'./pcb_brush.png'})
-    _sbBoard.setObserverMode(true);
+    // _sbBoard.setExistBrush({src:'./pcb_brush.png'})
+    // _sbBoard.setObserverMode(true);
     workbenchDom.appendChild(_sbBoard.getWrapDom())
     // document.body.appendChild(_sbBoard.getWrapDom())
     _sbBoard.getCanvasDom().addEventListener('mousedown', (e)=>{

@@ -51,7 +51,6 @@ export default class sbBoard {
       y: 0,
     }
     this.modifyRect = null;
-    this.lockModifyRect = null;
     this.tmpPath2d = null;
     this.hoverDraw = null;
 
@@ -59,6 +58,7 @@ export default class sbBoard {
     this.pencilMoveFn = null;
     this.pencilUpFn = null;
     this.pencilDom = null;
+    this.prevCursor = '';
     return this.init()
   }
   // 初始化
@@ -100,9 +100,7 @@ export default class sbBoard {
     document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
     document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
-    this.sbDom.oncontextmenu = function() {
-      return false;
-    }
+
 
     this.renderBoard()
     return this;
@@ -392,8 +390,11 @@ export default class sbBoard {
     return this.hoverPoint;
   }
   findOutFoucusDraw(){
+    console.log(345)
     this.tinkerUp = null;
     if (this.selectedDraw) {
+      console.log('has draw')
+      console.log(this.selectedDraw)
       // 判断是否单选情况
       if (this.selectedDraw.constructor === Object) {
         const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
@@ -410,15 +411,16 @@ export default class sbBoard {
           if (_dot.wayIndex !== undefined && _dot.wayIndex !== null && _dot.wayIndex.constructor === Number) {
             this.tinkerUp['wayIndex'] = _dot.wayIndex
           }
-          this.lockModifyRect = JSON.parse(JSON.stringify(this.modifyRect))
           break;
         }
       }
     } else {
+      console.log('has no draw')
       this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
     }
 
     if (this.selectedDraw && !this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) && !this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) && !this.tinkerUp && !this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)) {
+      console.log('clear draw')
       this.selectedDraw = null;
       this.modifyRect = null
     }
@@ -502,47 +504,6 @@ export default class sbBoard {
         if (this.tinkerUp) {
           // console.log('调整尺寸')
           // 调整尺寸
-          if (this.selectedDraw.constructor === Array) {
-            console.log('delta 1')
-            let _ds = this.getDeltaSize(this.hoverPoint.x, this.hoverPoint.y)
-            switch(this.tinkerUp.code) {
-              case "br":
-                this.selectedDraw.forEach(sval => {
-                  if (sval.data.type === 'rect') {
-                    let _item = this.originDraws[sval.index];
-                    if (_item.height!==undefined) {
-                      _item.height = sval.data.height + _ds.height*sval.data.height/this.lockModifyRect.height
-                    }
-                    if (this.lockModifyRect.y !== _item.y) {
-                      _item.y = sval.data.y + _ds.height*sval.data.y/this.lockModifyRect.y;
-                    }
-                    if (_item.width!==undefined) {
-                      _item.width = sval.data.width + _ds.width*sval.data.width/this.lockModifyRect.width
-                    }
-                    if (this.lockModifyRect.x !== _item.x) {
-                      _item.x = sval.data.x + _ds.width*sval.data.x/this.lockModifyRect.x;
-                    }
-                  }
-                })
-                break;
-              case "tl":
-                // _item.height = _sditem.height - _ds.height
-                // _item.y = _sditem.y + _ds.height
-                // _item.width = _sditem.width - _ds.width
-                // _item.x = _sditem.x + _ds.width
-                break;
-              case "tr":
-                // _item.width = _sditem.width + _ds.width
-                // _item.height = _sditem.height - _ds.height
-                // _item.y = _sditem.y + _ds.height
-                break;
-              case "bl":
-                // _item.height = _sditem.height + _ds.height
-                // _item.width = _sditem.width - _ds.width
-                // _item.x = _sditem.x + _ds.width
-                break;
-            }
-          }
           if (this.selectedDraw.constructor === Object) {
             this.adjustSize(this.selectedDraw)
           }
@@ -558,7 +519,6 @@ export default class sbBoard {
           }
         }
       } else {
-        console.log('drawrect 1')
         this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
         this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)'
         this.tmpRect['strokeStyle'] = 'transparent'
@@ -615,27 +575,13 @@ export default class sbBoard {
                 break;
             }
           }
-          this.detectDrawIsOverSize({data:_item, index:this.selectedDraw.index})
-          this.selectedDraw.data = JSON.parse(JSON.stringify(_item));
         }
-        if (this.selectedDraw.constructor === Array) {
-          this.detectGroupDrawIsOverSize()
-          const _selectedIndex = this.selectedDraw.map(val=>val.index);
-          let _selectedOrigins =[] 
-          this.originDraws.filter((val, index) => {
-            if (_selectedIndex.includes(index)) {
-              _selectedOrigins.push({
-                data: val,
-                index
-              })
-            }
-          });
-          this.selectedDraw = JSON.parse(JSON.stringify(_selectedOrigins));
-        }
+        this.detectDrawsIsOverSize()
       } else {
         if (this.tmpRect) {
           // 检测有哪些draw在框选框内
           this.selectedDraw = this.detectDrawsOver()
+          console.log('tmpRect')
           console.log(this.selectedDraw)
           this.tmpRect = null;
         }
@@ -661,7 +607,6 @@ export default class sbBoard {
     }
   }
   rectMoveFn(e) {
-    console.log(111)
     if (!this.pencilPressing) {
       return;
     }
@@ -672,7 +617,6 @@ export default class sbBoard {
     this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
   }
   rectUpFn(e) {
-    console.log(34)
     if (!this.pencilPressing) {
       return;
     }
@@ -696,14 +640,13 @@ export default class sbBoard {
     this.tmpRect = null;
     if (someOneRect.width > 20 || someOneRect.height > 20)  {
       // 记录已经画的rects
-      // someOneRect['id'] = this.generateUUID()
-      this.detectDrawIsOverSize({data:someOneRect})
+      someOneRect['id'] = this.generateUUID()
       this.originDraws.push(someOneRect)
+      this.detectDrawsIsOverSize()
       this.selectedDraw = JSON.parse(JSON.stringify({
         data: this.originDraws[this.originDraws.length-1],
         index: (this.originDraws.length-1)
       }))
-      
     }
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
@@ -732,10 +675,10 @@ export default class sbBoard {
     }
     if (this.detectIsDBClick(e.timeStamp)) {
       this.setDrawType('pointer', false)
-      // this.tmpPolygon['id'] = this.generateUUID()
+      this.tmpPolygon['id'] = this.generateUUID()
       this.tmpPolygon['closed'] = true;
       this.pencilPosition = null;
-      this.detectDrawIsOverSize({data:this.tmpPolygon})
+      this.detectDrawsIsOverSize()
       this.originDraws.push(this.tmpPolygon)
       this.tmpPolygon = null;
       this.selectedDraw = JSON.parse(JSON.stringify({
@@ -847,10 +790,14 @@ export default class sbBoard {
         }
       })
     }
-    if (tmp_selectedDraw.length === 1) {
-      tmp_selectedDraw = tmp_selectedDraw[0]
+    if (tmp_selectedDraw.length) {
+      if (tmp_selectedDraw.length === 1) {
+        tmp_selectedDraw = tmp_selectedDraw[0]
+      }
+      return JSON.parse(JSON.stringify(tmp_selectedDraw))
+    } else {
+      return null;
     }
-    return JSON.parse(JSON.stringify(tmp_selectedDraw))
   }
   // 导出draws数据
   exportDrawsData() {
@@ -1270,6 +1217,26 @@ export default class sbBoard {
       })
     }
   }
+  renewSelectedDraw() {
+    if (this.selectedDraw) {
+      if (this.selectedDraw.constructor === Object) { 
+        this.selectedDraw['data'] = JSON.parse(JSON.stringify(this.originDraws[this.selectedDraw.index]))
+      }
+      if (this.selectedDraw.constructor === Array) {
+        const _selectedIndex = this.selectedDraw.map(val=>val.index);
+        let _selectedOrigins =[] 
+        this.originDraws.forEach((val, index) => {
+          if (_selectedIndex.includes(index)) {
+            _selectedOrigins.push({
+              data: val,
+              index
+            })
+          }
+        });
+        this.selectedDraw = JSON.parse(JSON.stringify(_selectedOrigins));
+      }
+    }
+  }
   // 监听键盘按键释放
   sbDomKeyup(e) {
     const keycode = e.keyCode;
@@ -1305,6 +1272,7 @@ export default class sbBoard {
     if (keycode === 8 || keycode === 46) {
       this.deleteSelectedDraw()
     }
+    this.detectDrawsIsOverSize()
   }
   // 监听键盘按键按下
   sbDomKeydown(e) {
@@ -1332,13 +1300,15 @@ export default class sbBoard {
       return;
     }
     if (keycode === 27) {
+      console.log(this.selectedDraw, this.modifyRect, )
       // esc
       this.selectedDraw = null;
       if (this.drawType !== 'pointer') {
         this.modifyRect = null;
         this.tmpPolygon = null;
         this.tmpRect = null;
-        this.drawType = 'pointer'
+        // this.drawType = 'pointer'
+        this.setDrawType('pointer')
         document.documentElement.style.cursor = 'default'
       }
       return;
@@ -1355,7 +1325,6 @@ export default class sbBoard {
       return;
     }
     if (this.selectedDraw) {
-      let _renew_flag = true; 
       const _stepDelta = e.shiftKey ? 10 : 1;
       const _step = this.normalFloat(_stepDelta/this.zoomSize)
       switch(keycode) {
@@ -1404,23 +1373,7 @@ export default class sbBoard {
           }
           break;
       }
-      if (this.selectedDraw.constructor === Object && _renew_flag) { 
-        this.selectedDraw['data'] = JSON.parse(JSON.stringify(this.originDraws[this.selectedDraw.index]))
-      }
-      if (this.selectedDraw.constructor === Array && _renew_flag) {
-        this.detectGroupDrawIsOverSize()
-        const _selectedIndex = this.selectedDraw.map(val=>val.index);
-        let _selectedOrigins =[] 
-        this.originDraws.forEach((val, index) => {
-          if (_selectedIndex.includes(index)) {
-            _selectedOrigins.push({
-              data: val,
-              index
-            })
-          }
-        });
-        this.selectedDraw = JSON.parse(JSON.stringify(_selectedOrigins));
-      }
+      
       
     }
     
@@ -1511,97 +1464,33 @@ export default class sbBoard {
     }
   }
   // 侦测draw组是否超出底图范围
-  detectGroupDrawIsOverSize() {
-    const modifyRect = this.modifyRect;
-    if (!modifyRect) {
+  detectDrawsIsOverSize() {
+    if (!this.bgObj) {
       return;
     }
-    if ((modifyRect.x+modifyRect.width) > this.bgObj.width){
-      const _delta = Math.abs(this.bgObj.width-(modifyRect.x+modifyRect.width));
-      this.selectedDraw.forEach(sval => {
-        let _item = this.originDraws[sval.index]
-        _item['x'] = _item.x-_delta
-        if(_item.ways) {
-          _item.ways.forEach((val, index)=>{
-            val['x'] = val.x-_delta
-          })
+    this.originDraws.forEach((oval, oindex) => {
+      if (oval.type === 'rect') {
+        // 右尽头
+        if ((oval.x+oval.width) > this.bgObj.width){
+          const _delta = Math.abs(this.bgObj.width-oval.width);
+          oval['x'] = _delta
         }
-      })
-    }
-    if ((modifyRect.y + modifyRect.height) > this.bgObj.height){
-      const _delta = Math.abs(this.bgObj.height-(modifyRect.y + modifyRect.height));
-      this.selectedDraw.forEach(sval => {
-        let _item = this.originDraws[sval.index]
-        _item['y'] = _item.y-_delta
-        if(_item.ways) {
-          _item.ways.forEach((val, index)=>{
-            val['y'] = val.y-_delta
-          })
+        // 下尽头
+        if ((oval.y + oval.height) > this.bgObj.height){
+          const _delta = Math.abs(this.bgObj.height-oval.height);
+          oval['y'] = _delta
         }
-      })
-    }
-    if (modifyRect.x<0){
-      this.selectedDraw.forEach(sval => {
-        let _item = this.originDraws[sval.index]
-        _item['x'] = _item.x - modifyRect.x
-        if(_item.ways) {
-          _item.ways.forEach((val, index)=>{
-            val['x'] = val.x - modifyRect.x
-          })
+        // 上尽头
+        if (oval.x<0){
+          oval['x'] = 0
         }
-      })
-    }
-    if (modifyRect.y<0){
-      this.selectedDraw.forEach(sval => {
-        let _item = this.originDraws[sval.index]
-        _item['y'] = _item.y - modifyRect.y
-        if(_item.ways) {
-          _item.ways.forEach((val, index)=>{
-            val['y'] = val.y - modifyRect.y
-          })
+        // 左尽头
+        if (oval.y<0){
+          oval['y'] = 0
         }
-      })
-    }
-  }
-  // 侦测是否超出图片范围
-  detectDrawIsOverSize(item){
-    const modifyRect = this.findOut4Poles(item)
-
-    let _item = item.data;
-    if ((modifyRect.x+modifyRect.width) > this.bgObj.width){
-      const _delta = Math.abs(this.bgObj.width-(modifyRect.x+modifyRect.width));
-      _item['x'] = _item.x-_delta
-      if(_item.ways) {
-        _item.ways.forEach((val, index)=>{
-          val['x'] = val.x-_delta
-        })
       }
-    }
-    if ((modifyRect.y + modifyRect.height) > this.bgObj.height){
-      const _delta = Math.abs(this.bgObj.height-(modifyRect.y + modifyRect.height));
-      _item['y'] = _item.y-_delta
-      if(_item.ways) {
-        _item.ways.forEach((val, index)=>{
-          val['y'] = val.y-_delta
-        })
-      }
-    }
-    if (modifyRect.x<0){
-      _item['x'] = _item.x - modifyRect.x
-      if(_item.ways) {
-        _item.ways.forEach((val, index)=>{
-          val['x'] = val.x - modifyRect.x
-        })
-      }
-    }
-    if (modifyRect.y<0){
-      _item['y'] = _item.y - modifyRect.y
-      if(_item.ways) {
-        _item.ways.forEach((val, index)=>{
-          val['y'] = val.y - modifyRect.y
-        })
-      }
-    }
+    })
+    this.renewSelectedDraw()
   }
   // 计算画笔是否在某个画图上
   calcIsOnDrawPath(x, y) {
