@@ -100,7 +100,9 @@ export default class sbBoard {
     document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
     document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
-
+    this.sbDom.oncontextmenu = (e)=>{
+      e.preventDefault()
+    }
 
     this.renderBoard()
     return this;
@@ -140,8 +142,12 @@ export default class sbBoard {
       this.bgObj = await this.asyncLoadImage(_obj.src)
       if (this.bgObj.success) {
         this.zoomSize = this.bgObj.scaled;
-        this.sbDom.width = this.bgObj.viewWidth
-        this.sbDom.height = this.bgObj.viewHeight
+        this.dragOffset = {
+          x: this.bgObj.offsetX,
+          y: this.bgObj.offsetY,
+        }
+        // this.sbDom.width = this.bgObj.viewWidth
+        // this.sbDom.height = this.bgObj.viewHeight
       }
     } else {
       this.sbCtx.fillStyle = _obj.fillStyle
@@ -245,12 +251,14 @@ export default class sbBoard {
       const image = new Image();
       image.src = src;
       image.onload = () => {
-        const { height, width, scaled } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
+        const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
         resolve({
           success: true,
           msg: 'load image complite',
           data: image,
-          scaled: scaled,
+          scaled,
+          offsetX, 
+          offsetY,
           viewWidth: width,
           viewHeight: height,
           width: image.naturalWidth,
@@ -327,10 +335,19 @@ export default class sbBoard {
   // 还原缩放
   zoomReset() {
     this.calcZoomedDragoffsetDeltaSize(false)
-    this.dragOffset = {
-      x: 0,
-      y: 0
+    console.log(this.bgObj)
+    if (this.bgObj) {
+      this.dragOffset = {
+        x: this.bgObj.offsetX,
+        y: this.bgObj.offsetY
+      }
+    } else {
+      this.dragOffset = {
+        x: 0,
+        y: 0
+      }
     }
+    
     this.zoomSize = this.bgObj ? this.bgObj.scaled : 1;
   }
   // 放大
@@ -390,11 +407,8 @@ export default class sbBoard {
     return this.hoverPoint;
   }
   findOutFoucusDraw(){
-    console.log(345)
     this.tinkerUp = null;
     if (this.selectedDraw) {
-      console.log('has draw')
-      console.log(this.selectedDraw)
       // 判断是否单选情况
       if (this.selectedDraw.constructor === Object) {
         const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
@@ -415,12 +429,10 @@ export default class sbBoard {
         }
       }
     } else {
-      console.log('has no draw')
       this.selectedDraw = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
     }
 
     if (this.selectedDraw && !this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) && !this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) && !this.tinkerUp && !this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)) {
-      console.log('clear draw')
       this.selectedDraw = null;
       this.modifyRect = null
     }
@@ -581,8 +593,6 @@ export default class sbBoard {
         if (this.tmpRect) {
           // 检测有哪些draw在框选框内
           this.selectedDraw = this.detectDrawsOver()
-          console.log('tmpRect')
-          console.log(this.selectedDraw)
           this.tmpRect = null;
         }
       }
@@ -1180,7 +1190,7 @@ export default class sbBoard {
   // 滚动缩放
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
-    if (this.ctrlKey && Math.abs(_wheelDelta) > 0) {
+    if ((this.ctrlKey || this.altKey) && Math.abs(_wheelDelta) > 0) {
       if (_wheelDelta > 0) {
         this.zoomIn(0.020)
       } else {
@@ -1300,14 +1310,12 @@ export default class sbBoard {
       return;
     }
     if (keycode === 27) {
-      console.log(this.selectedDraw, this.modifyRect, )
       // esc
       this.selectedDraw = null;
       if (this.drawType !== 'pointer') {
         this.modifyRect = null;
         this.tmpPolygon = null;
         this.tmpRect = null;
-        // this.drawType = 'pointer'
         this.setDrawType('pointer')
         document.documentElement.style.cursor = 'default'
       }
