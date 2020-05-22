@@ -1,4 +1,4 @@
-class recordActionHistory {
+export default class recordActionHistory {
   constructor(options) {
     this.options = Object.assign({
       recordName: '', // 是否使用特定名字
@@ -10,9 +10,13 @@ class recordActionHistory {
     this.historyActionArray = []
     this.init()
   }
-
+  // 后退
   revoke() {
     this.revokedStep = this.revokedStep + 1;
+    if (this.revokedStep >= this.historyActionArray.length){
+      this.revokedStep = this.historyActionArray.length-1
+      return null;
+    }
     if (this.revokedStep > this.historyActionArray.length) {
       this.revokedStep = this.historyActionArray.length;
       return this.showoffHistoryArray
@@ -20,9 +24,13 @@ class recordActionHistory {
     this.showoffHistoryArray.shift()
     return this.showoffHistoryArray
   }
-
+  // 前进
   onward() {
     this.revokedStep = this.revokedStep - 1;
+    if (this.revokedStep < 0){
+      this.revokedStep = 0
+      return null;
+    }
     if (!this.historyActionArray[this.revokedStep]) {
       this.revokedStep = this.revokedStep + 1;
       return this.showoffHistoryArray
@@ -30,26 +38,26 @@ class recordActionHistory {
     this.showoffHistoryArray.unshift(this.historyActionArray[this.revokedStep])
     return this.showoffHistoryArray
   }
-
+  // 获取显示的历史操作数组
   getHistoryArray() {
     return this.showoffHistoryArray
   }
-
+  // 获取当前步数
   getRevokedStep() {
     return this.revokedStep
   }
-
+  // 记录历史变化
   recordChange(data) {
     this.historyActionArray.splice(this.revokedStep, 0, data)
-    if (this.revokedStep!==0) {
+    if (this.revokedStep !== 0) {
       this.historyActionArray = this.historyActionArray.slice(-(this.historyActionArray.length-this.revokedStep))
       this.revokedStep = 0;
     }
     this.showoffHistoryArray = this.historyActionArray.slice()
   }
-
+  // 初始化
   init() {
-    this.historyActionArray = [...this.options.historyArray]
+    this.historyActionArray = this.options.historyArray
     if (this.options.useWindow) {
       if (window[this.options.recordName]) {
         console.warn('改变量名已被使用')

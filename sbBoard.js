@@ -1,3 +1,4 @@
+import recordActionHistory from './recordActionHistory.js'
 export default class sbBoard {
   constructor(options) {
     this.options = Object.assign({
@@ -59,6 +60,10 @@ export default class sbBoard {
     this.pencilUpFn = null;
     this.pencilDom = null;
     this.prevCursor = '';
+    this.rightPressing = null;
+    this.hiddenDraws = false;
+    this.historyRecordHandler = null;
+    this.drawChanged = false;
     return this.init()
   }
   // 初始化
@@ -104,8 +109,17 @@ export default class sbBoard {
       e.preventDefault()
     }
 
+    this.initHistoryAction()
+
     this.renderBoard()
     return this;
+  }
+  initHistoryAction(){
+    const _clone = JSON.parse(JSON.stringify(this.originDraws))
+    console.log(this.originDraws.constructor)
+    this.historyRecordHandler = new recordActionHistory({
+      historyArray: [_clone]
+    })
   }
   // 销毁
   destroy() {
@@ -364,9 +378,22 @@ export default class sbBoard {
       this.calcZoomedDragoffsetDeltaSize(false)
     }
   }
+  getAllDraws(){
+    return this.originDraws;
+  }
+  setDrawLabel(draws, label, strokeStyle){
+    if (draws.constructor === Object) {
+      this.originDraws[draws.index]['label'] = label;
+      this.originDraws[draws.index]['strokeStyle'] = strokeStyle;
+    }
+    // 神奇的显示隐藏功能
+    if (this.hiddenDraws){
+      this.selectedDraw = null;
+    }
+  }
   // 工具栏用方法end
   // 设置画图类型
-  setDrawType(params, publicUse=true) {
+  setDrawType(params, publicUse=true, options={}) {
     if (publicUse) {
       this.selectedDraw = null;
     }
@@ -391,17 +418,14 @@ export default class sbBoard {
       return false;
     }
     if (this[`${this.drawType}DownFn`]) {
-      this.pencilDownFn = (e)=>this[`${this.drawType}DownFn`](e)
+      this.pencilDownFn = (e)=>this[`${this.drawType}DownFn`](e, options)
       this.sbDom.addEventListener('mousedown', this.pencilDownFn, false)
-      this.pencilMoveFn = (e)=>this[`${this.drawType}MoveFn`](e)
+      this.pencilMoveFn = (e)=>this[`${this.drawType}MoveFn`](e, options)
       this.sbDom.addEventListener('mousemove', this.pencilMoveFn, false)
-      this.pencilUpFn = (e)=>this[`${this.drawType}UpFn`](e)
+      this.pencilUpFn = (e)=>this[`${this.drawType}UpFn`](e, options)
       this.sbDom.addEventListener('mouseup', this.pencilUpFn, false)
       this.sbDom.addEventListener('mouseout', this.pencilUpFn, false)
     }
-  }
-  setDrawLabel(drawIndex, label){
-
   }
   getPointerPosition(){
     return this.hoverPoint;
@@ -436,6 +460,29 @@ export default class sbBoard {
       this.selectedDraw = null;
       this.modifyRect = null
     }
+  }
+  recordHistory(){
+    const _clone = Array.from(this.originDraws)
+    this.historyRecordHandler.recordChange(this.originDraws[this.originDraws.length-1].x)
+  }
+  revoke(){
+    this.historyRecordHandler.revoke()
+    const _data = this.historyRecordHandler.getHistoryArray()[0]
+    if (!_data) {
+      console.log(`需要撤销的数据有异常`);
+      return;
+    }
+    console.log(_data)
+    // this.setDrawsData(_data)
+  }
+  onward(){
+    this.historyRecordHandler.onward()
+    const _data = this.historyRecordHandler.getHistoryArray()[0]
+    if (!_data) {
+      console.log(`需要前进的数据有异常`);
+      return;
+    }
+    this.setDrawsData(_data)
   }
   // 指针状态事件
   pointerDownFn(e){
@@ -475,13 +522,31 @@ export default class sbBoard {
         }
       }
     }
-    if (e.button === 2 && !this.isObserver) {
-      this.findOutFoucusDraw()
+    if (e.button === 2 ) {
+      if (!this.draging) {
+        this.rightPressing = true;
+        this.pencilPressing = true;
+        this.draging = true;
+        this.dragDownPoint = {
+          x: e.offsetX - this.dragOffset.x,
+          y: e.offsetY - this.dragOffset.y
+        }
+        return;
+      }
+      if (!this.isObserver) {
+        this.findOutFoucusDraw()
+
+        if (this.pencilPressing) {
+          return;
+        }
+        this.pencilPressing = true;
+        this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+      }
     }
   }
   pointerMoveFn(e){
     this.hoverDraw = null;
-    if (this.spaceBar && this.pencilPressing && this.draging) {
+    if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
       return;
@@ -530,6 +595,7 @@ export default class sbBoard {
             })
           }
         }
+        this.drawChanged = true;
       } else {
         this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
         this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)'
@@ -539,6 +605,10 @@ export default class sbBoard {
     }
   }
   pointerUpFn(e){
+    
+    if (this.rightPressing) {
+      this.rightPressing = false;
+    }
     if (this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
@@ -589,6 +659,11 @@ export default class sbBoard {
           }
         }
         this.detectDrawsIsOverSize()
+
+        if (this.drawChanged) {
+          this.recordHistory()
+          this.drawChanged = false;
+        }
       } else {
         if (this.tmpRect) {
           // 检测有哪些draw在框选框内
@@ -601,6 +676,7 @@ export default class sbBoard {
     }
     
     this.pencilPosition = null;
+    
   }
   // 矩形Draw事件
   rectDownFn(e) {
@@ -616,7 +692,7 @@ export default class sbBoard {
       this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
     }
   }
-  rectMoveFn(e) {
+  rectMoveFn(e, options) {
     if (!this.pencilPressing) {
       return;
     }
@@ -624,9 +700,9 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
-    this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
+    this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle)
   }
-  rectUpFn(e) {
+  rectUpFn(e, options) {
     if (!this.pencilPressing) {
       return;
     }
@@ -635,7 +711,7 @@ export default class sbBoard {
       y: e.offsetY,
     }
     this.pencilPressing = false;
-    let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
+    let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle)
     const _dx = someOneRect.x+someOneRect.width;
     if (someOneRect.x > _dx) {
       someOneRect.x = _dx
@@ -660,6 +736,7 @@ export default class sbBoard {
     }
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
+    this.recordHistory()
   }
   // 多边形事件
   polygonDownFn(e) {
@@ -738,6 +815,7 @@ export default class sbBoard {
       }
       this.pencilPressing = false
     }
+
   }
   // 橡皮檫事件
   eraserDownFn(e){
@@ -964,6 +1042,7 @@ export default class sbBoard {
   }
   // 设置draws数据(外部接口)
   setDrawsData(data) {
+    this.selectedDraw = null;
     this.originDraws = data 
   }
   // 绘制标签
@@ -983,7 +1062,7 @@ export default class sbBoard {
         this.sbCtx.font=`${_fontOriginSize}px Arial`;
         this.sbCtx.fillStyle = "#fff"
         this.sbCtx.fillText(this.fittingString(this.sbCtx, rect.label, _width-_paddingLeft), _fx, _y);
-      } else {
+      } else if (!rect.width) {
         const _strWidth = this.sbCtx.measureText(rect.label).width;
         const _width = _strWidth+ 6/zoomSize
         const _x = rect.x;
@@ -1017,10 +1096,10 @@ export default class sbBoard {
   // 重组显示文字
   fittingString(_ctx, str, maxWidth) {
     let strWidth = _ctx.measureText(str).width;
-    const ellipsis = '…';
+    const ellipsis = '...';
     const ellipsisWidth = _ctx.measureText(ellipsis).width;
-    if ( maxWidth <= ellipsisWidth) {
-      return '.';
+    if (strWidth < maxWidth) {
+      return str
     } else {
       var len = str.length;
       while (strWidth >= maxWidth - ellipsisWidth && len-- > 0) {
@@ -1030,12 +1109,18 @@ export default class sbBoard {
       return str + ellipsis;
     }
   }
+  // 设置是否显示隐藏draws, 临时的不会隐藏
+  setHiddenDraws(params=true) {
+    this.selectedDraw = null;
+    this.hiddenDraws = params;
+  }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
     this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
     this.sbCtx.scale(this.zoomSize, this.zoomSize)
     this.sbCtx.translate(this.dragOffset.x/this.zoomSize, this.dragOffset.y/this.zoomSize)
+    
     this.sbCtx.globalCompositeOperation = "source-over";
     if (this.existBrushObj) {
       this.sbCtx.drawImage(this.existBrushObj.data, 0, 0)
@@ -1109,16 +1194,29 @@ export default class sbBoard {
       this.originDraws.forEach(val => {
         switch (val.type) {
           case 'rect':
-            this.initPencilStyle(val.strokeStyle, val.lineWidth)
-            this.sbCtx.strokeRect(
-              val.x,
-              val.y,
-              val.width,
-              val.height
-            );
-            if (val.label){
-              this.labelRect(val, this.zoomSize, this.isObserver);
+            if (this.hiddenDraws) {
+              if(!val.label) {
+                this.initPencilStyle(val.strokeStyle, val.lineWidth)
+                this.sbCtx.strokeRect(
+                  val.x,
+                  val.y,
+                  val.width,
+                  val.height
+                );
+              }
+            } else {
+              this.initPencilStyle(val.strokeStyle, val.lineWidth)
+              this.sbCtx.strokeRect(
+                val.x,
+                val.y,
+                val.width,
+                val.height
+              );
+              if (val.label){
+                this.labelRect(val, this.zoomSize, this.isObserver);
+              }
             }
+            
             break;
           case "polygon":
             this.sbCtx.strokeStyle = 'red'
@@ -1137,6 +1235,7 @@ export default class sbBoard {
         }
       })
     }
+    
     // 临时矩形
     if (this.tmpRect) {
       const _tmpRect = new Path2D()
@@ -1786,7 +1885,7 @@ export default class sbBoard {
     this.tmpPolygon['closed'] = closed;
   }
   // 绘画矩形
-  drawRect(cx, cy) {
+  drawRect(cx, cy, label, strokeStyle) {
     const _ds = this.getDeltaSize(cx, cy)
     const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
     const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
@@ -1796,6 +1895,8 @@ export default class sbBoard {
       width: _ds.width, 
       height: _ds.height,
       type: 'rect',
+      label,
+      strokeStyle
     }
     return this.tmpRect
   }

@@ -111,6 +111,14 @@
       <li class="tools-list-item">
         <button id="pcbSmall">pcbSmall</button>
       </li>
+      <!-- 前进 -->
+      <li class="tools-list-item">
+        <button id="onward">onward</button>
+      </li>
+      <!-- 后退 -->
+      <li class="tools-list-item">
+        <button id="revoke">revoke</button>
+      </li>
       <!-- 圆形 -->
       <!-- <li class="tools-list-item">
         <button id="circle">circle</button>
@@ -185,6 +193,12 @@
       // width: document.body.clientWidth,
       // height: document.body.clientHeight
     })
+
+    function generatePop(x, y){
+      const pop = document.createElement('div')
+      pop.style.cssText = `width: 100px;height: 100px;position:fixed;top:${y}px;left:${x}px;z-index:100;background:darkslategray;`;
+      document.body.appendChild(pop)
+    }
     // _sbBoard.setDrawType('polygon')
     // _sbBoard.setDrawsData([{"x":1532,"y":472,"ways":[{"x":2423,"y":231},{"x":1955,"y":0},{"x":1581,"y":0}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
     _sbBoard.setBackground({src:'./pcb_demo.jpg'})
@@ -192,15 +206,19 @@
     // _sbBoard.setObserverMode(true);
     workbenchDom.appendChild(_sbBoard.getWrapDom())
     // document.body.appendChild(_sbBoard.getWrapDom())
-    _sbBoard.getCanvasDom().addEventListener('mousedown', (e)=>{
-      const selectedDraw = _sbBoard.getSelectedDraw()
-      console.log(selectedDraw)
-
-      if (e.button === 2 ) {
-        const _position = _sbBoard.getPointerPosition()
-        console.log(_position)
-      }
+    _sbBoard.getCanvasDom().addEventListener('mouseup', (e)=>{
       
+      // setTimeout(()=>{
+      //   if (e.button === 0 ) {
+          
+      //       const selectedDraw = _sbBoard.getSelectedDraw()
+      //   console.log(selectedDraw)
+      //       if (!selectedDraw.data.label) {
+      //         generatePop(e.clientX, e.clientY)
+      //       }
+          
+      //   }
+      // })
     })
     // let scaled = false;
     // const scaleBtn = document.getElementById('scale')
@@ -245,6 +263,14 @@
     bindEvent('zoomReset', ()=>{
       console.log('zoomReset')
       _sbBoard.zoomReset()
+    })
+    bindEvent('onward', ()=>{
+      // console.log('onward')
+      _sbBoard.onward()
+    })
+    bindEvent('revoke', ()=>{
+      // console.log('revoke')
+      _sbBoard.revoke()
     })
     bindEvent('rect', ()=>{
       console.log('rect')
