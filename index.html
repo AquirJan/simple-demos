@@ -185,7 +185,6 @@
     }
     let observer = false;
     const workbenchDom = document.getElementById('workbench');
-    const workbenchRect = workbenchDom.getBoundingClientRect()
     const sbBoardIns = new sbBoard({
       wrapStyle:{
         // position: 'absolute',
@@ -197,8 +196,7 @@
         brushColor: 'green'
       },
       drawHistory: initData,
-      width: workbenchRect.width,
-      height: workbenchRect.height
+      wrap:workbenchDom
       // width: document.body.clientWidth,
       // height: document.body.clientHeight
     })

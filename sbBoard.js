@@ -2,12 +2,14 @@ import recordActionHistory from './recordActionHistory.js'
 export default class sbBoard {
   constructor(options) {
     this.options = Object.assign({
-      width: window.innerWidth,
-      height: window.innerHeight,
+      wrap: window,
+      // width: window.innerWidth,
+      // height: window.innerHeight,
       style: {},
       wrapStyle: {},
       drawHistory: [],
       recordHistory: true,
+      recordWidthLabel: true,
       pencilStyle: {
         strokeStyle: '#333',
         lineWidth: 2,
@@ -69,14 +71,26 @@ export default class sbBoard {
   }
   // 初始化
   init() {
+    let _wrapRect = null;
+    if (this.options.wrap.innerWidth) {
+      _wrapRect = {width: this.options.wrap.innerWidth, height: this.options.wrap.innerHeight}
+    } else {
+      _wrapRect = this.options.wrap.getBoundingClientRect()
+    }
+    if (!_wrapRect) {
+      return console.error('options.wrap error')
+    }
+    this.options['width'] = _wrapRect.width
+    this.options['height'] = _wrapRect.height
     this.sbWrap = document.createElement('div');
     this.sbDom = document.createElement('canvas')
     this.sbDom.width = this.options.width
     this.sbDom.height = this.options.height
     let wrapDefaultStyle = {
       'user-select': 'none',
-      'width': this.options.width+'px',
-      'height': this.options.height+'px',
+      'width': '100%',
+      'height': '100%',
+      'position': 'relative',
       'display': 'flex',
       'align-items': 'center',
       'justify-content': 'center'
@@ -109,18 +123,47 @@ export default class sbBoard {
     this.sbDom.oncontextmenu = (e)=>{
       e.preventDefault()
     }
-    if (this.options.recordHistory) {
-      this.initActionHistory()
-    }
+
+    window.addEventListener('resize', (e)=>{
+      let _wrapRect = null;
+      if (this.options.wrap.innerWidth) {
+        _wrapRect = {width: this.options.wrap.innerWidth, height: this.options.wrap.innerHeight}
+      } else {
+        _wrapRect = this.options.wrap.getBoundingClientRect()
+      }
+      if (!_wrapRect) {
+        return console.error('options.wrap error')
+      }
+      this.options['width'] = _wrapRect.width
+      this.options['height'] = _wrapRect.height
+      this.sbDom.width = this.options.width
+      this.sbDom.height = this.options.height
+      if(this.bgObj) {
+        this.setBackground({src:this.bgObj.src})
+      }
+    })
 
     this.renderBoard()
     return this;
   }
+
   // 历史记录初始化
-  initActionHistory(){
+  initActionHistory(historys){
     this.historyRecordHandler = new recordActionHistory({
-      historyArray: [this.options.drawHistory]
+      historyArray: [historys]
     })
+  }
+  // 获取历史操作记录
+  getHistoryRecords(){
+    return this.historyRecordHandler.getHistoryArray()
+  }
+  // 获取历史操作记录
+  getRevokedStep(){
+    return this.historyRecordHandler.getRevokedStep()
+  }
+  // 清空历史操作
+  reinitRecordHistory(historys) {
+    this.initActionHistory(historys)
   }
   // 历史记录操作,后退
   revoke(){
@@ -133,7 +176,7 @@ export default class sbBoard {
       console.error(`需要撤销的数据有异常`);
       return;
     }
-    this.setDrawsData(_data)
+    this.setDrawsData(_data, false)
   }
   // 历史记录操作,前进
   onward(){
@@ -146,7 +189,7 @@ export default class sbBoard {
       console.error(`需要前进的数据有异常`);
       return;
     }
-    this.setDrawsData(_data)
+    this.setDrawsData(_data, false)
   }
   // 销毁
   destroy() {
@@ -187,8 +230,6 @@ export default class sbBoard {
           x: this.bgObj.offsetX,
           y: this.bgObj.offsetY,
         }
-        // this.sbDom.width = this.bgObj.viewWidth
-        // this.sbDom.height = this.bgObj.viewHeight
       }
     } else {
       this.sbCtx.fillStyle = _obj.fillStyle
@@ -294,6 +335,7 @@ export default class sbBoard {
       image.onload = () => {
         const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
         resolve({
+          src,
           success: true,
           msg: 'load image complite',
           data: image,
@@ -309,7 +351,8 @@ export default class sbBoard {
       image.onerror = () => {
         resolve({
           success: false,
-          msg: 'load image error'
+          msg: 'load image error',
+          src,
         })
       }
     })
@@ -411,10 +454,19 @@ export default class sbBoard {
       this.originDraws[draws.index]['label'] = label;
       this.originDraws[draws.index]['strokeStyle'] = strokeStyle;
     }
+    // 记录操作
+    if (this.options.recordWidthLabel) {
+      if (this.originDraws[draws.index].label) {
+        this.historyRecordHandler.recordChange(this.getAllDraws())
+      }
+    } else {
+      this.historyRecordHandler.recordChange(this.getAllDraws())
+    }
     // 神奇的显示隐藏功能
     if (this.hiddenDraws){
       this.selectedDraw = null;
     }
+    
   }
   // 工具栏用方法end
   // 设置画图类型
@@ -661,8 +713,30 @@ export default class sbBoard {
           }
         }
         this.detectDrawsIsOverSize()
+        // 记录操作
+        if (this.shouldRecord) {
+          if (this.options.recordWidthLabel) {
+            if (this.selectedDraw.data.label) {
+              this.historyRecordHandler.recordChange(this.getAllDraws())
+            }
+          } else {
+            this.historyRecordHandler.recordChange(this.getAllDraws())
+          }
+          this.shouldRecord = false;
+        }
       } else {
         if (this.tmpRect) {
+          const _dx = this.tmpRect.x+this.tmpRect.width;
+          if (this.tmpRect.x > _dx) {
+            this.tmpRect.x = _dx
+          }
+          const _dy = this.tmpRect.y+this.tmpRect.height
+          if (this.tmpRect.y > _dy) {
+            this.tmpRect.y = _dy
+          }
+          this.tmpRect['width'] = Math.abs(this.tmpRect.width)
+          this.tmpRect['height'] = Math.abs(this.tmpRect.height)
+          console.dir(this.tmpRect)
           // 检测有哪些draw在框选框内
           this.selectedDraw = this.detectDrawsOver()
           this.tmpRect = null;
@@ -730,6 +804,15 @@ export default class sbBoard {
         data: this.originDraws[this.originDraws.length-1],
         index: (this.originDraws.length-1)
       }))
+      if (this.shouldRecord) {
+        if (this.options.recordWidthLabel) {
+          if (this.selectedDraw.data.label) {
+            console.log('rect label')
+            this.historyRecordHandler.recordChange(this.getAllDraws())
+          }
+        }
+        this.shouldRecord = false;
+      }
     }
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
@@ -1036,9 +1119,12 @@ export default class sbBoard {
     }
   }
   // 设置draws数据(外部接口)
-  setDrawsData(data) {
+  setDrawsData(data, init=true) {
     this.selectedDraw = null;
-    this.originDraws = data 
+    this.originDraws = data;
+    if (this.options.recordHistory && init) {
+      this.initActionHistory(this.options.drawHistory)
+    }
   }
   // 绘制标签
   labelRect(rect, zoomSize=1, isObserver=false) {
@@ -1138,7 +1224,7 @@ export default class sbBoard {
       }
     });
     
-    // // 临时笔刷
+    // 临时笔刷
     if (this.tmpPath2d) {
       if (this.drawType === 'eraser') {
         this.sbCtx.globalCompositeOperation = "destination-out";
@@ -1378,6 +1464,16 @@ export default class sbBoard {
       this.deleteSelectedDraw()
     }
     this.detectDrawsIsOverSize()
+    if (this.shouldRecord) {
+      if (this.options.recordWidthLabel) {
+        if (this.selectedDraw && this.selectedDraw.constructor === Object && this.selectedDraw.data && this.selectedDraw.data.label) {
+          this.historyRecordHandler.recordChange(this.getAllDraws())
+        }
+      } else {
+        this.historyRecordHandler.recordChange(this.getAllDraws())
+      }
+      this.shouldRecord = false;
+    }
   }
   // 监听键盘按键按下
   sbDomKeydown(e) {
@@ -1593,13 +1689,7 @@ export default class sbBoard {
         }
       }
     })
-    if (this.shouldRecord) {
-      console.log(this.shouldRecord)
-      this.historyRecordHandler.recordChange(this.getAllDraws())
-      this.shouldRecord = false;
-    }
     
-    console.log(this.historyRecordHandler.getHistoryArray())
     this.renewSelectedDraw()
   }
   // 计算画笔是否在某个画图上
