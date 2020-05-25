@@ -42,6 +42,10 @@ export default class recordActionHistory {
   getHistoryArray() {
     return this.showoffHistoryArray
   }
+  // 获取最新一个
+  getHistoryArrayFirst() {
+    return this.showoffHistoryArray && this.showoffHistoryArray.length ? this.showoffHistoryArray[0] : null;
+  }
   // 获取当前步数
   getRevokedStep() {
     return this.revokedStep

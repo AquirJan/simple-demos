@@ -1,4 +1,3 @@
-import recordActionHistory from './recordActionHistory.js'
 export default class sbBoard {
   constructor(options) {
     this.options = Object.assign({
@@ -62,8 +61,6 @@ export default class sbBoard {
     this.prevCursor = '';
     this.rightPressing = null;
     this.hiddenDraws = false;
-    this.historyRecordHandler = null;
-    this.drawChanged = false;
     return this.init()
   }
   // 初始化
@@ -109,17 +106,8 @@ export default class sbBoard {
       e.preventDefault()
     }
 
-    this.initHistoryAction()
-
     this.renderBoard()
     return this;
-  }
-  initHistoryAction(){
-    const _clone = JSON.parse(JSON.stringify(this.originDraws))
-    console.log(this.originDraws.constructor)
-    this.historyRecordHandler = new recordActionHistory({
-      historyArray: [_clone]
-    })
   }
   // 销毁
   destroy() {
@@ -349,7 +337,6 @@ export default class sbBoard {
   // 还原缩放
   zoomReset() {
     this.calcZoomedDragoffsetDeltaSize(false)
-    console.log(this.bgObj)
     if (this.bgObj) {
       this.dragOffset = {
         x: this.bgObj.offsetX,
@@ -361,7 +348,6 @@ export default class sbBoard {
         y: 0
       }
     }
-    
     this.zoomSize = this.bgObj ? this.bgObj.scaled : 1;
   }
   // 放大
@@ -460,29 +446,6 @@ export default class sbBoard {
       this.selectedDraw = null;
       this.modifyRect = null
     }
-  }
-  recordHistory(){
-    const _clone = Array.from(this.originDraws)
-    this.historyRecordHandler.recordChange(this.originDraws[this.originDraws.length-1].x)
-  }
-  revoke(){
-    this.historyRecordHandler.revoke()
-    const _data = this.historyRecordHandler.getHistoryArray()[0]
-    if (!_data) {
-      console.log(`需要撤销的数据有异常`);
-      return;
-    }
-    console.log(_data)
-    // this.setDrawsData(_data)
-  }
-  onward(){
-    this.historyRecordHandler.onward()
-    const _data = this.historyRecordHandler.getHistoryArray()[0]
-    if (!_data) {
-      console.log(`需要前进的数据有异常`);
-      return;
-    }
-    this.setDrawsData(_data)
   }
   // 指针状态事件
   pointerDownFn(e){
@@ -595,7 +558,6 @@ export default class sbBoard {
             })
           }
         }
-        this.drawChanged = true;
       } else {
         this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
         this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)'
@@ -605,7 +567,6 @@ export default class sbBoard {
     }
   }
   pointerUpFn(e){
-    
     if (this.rightPressing) {
       this.rightPressing = false;
     }
@@ -659,11 +620,6 @@ export default class sbBoard {
           }
         }
         this.detectDrawsIsOverSize()
-
-        if (this.drawChanged) {
-          this.recordHistory()
-          this.drawChanged = false;
-        }
       } else {
         if (this.tmpRect) {
           // 检测有哪些draw在框选框内
@@ -676,7 +632,6 @@ export default class sbBoard {
     }
     
     this.pencilPosition = null;
-    
   }
   // 矩形Draw事件
   rectDownFn(e) {
@@ -726,7 +681,7 @@ export default class sbBoard {
     this.tmpRect = null;
     if (someOneRect.width > 20 || someOneRect.height > 20)  {
       // 记录已经画的rects
-      someOneRect['id'] = this.generateUUID()
+      someOneRect['id'] = this.uuidv4Short()
       this.originDraws.push(someOneRect)
       this.detectDrawsIsOverSize()
       this.selectedDraw = JSON.parse(JSON.stringify({
@@ -736,7 +691,6 @@ export default class sbBoard {
     }
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
-    this.recordHistory()
   }
   // 多边形事件
   polygonDownFn(e) {
@@ -762,7 +716,7 @@ export default class sbBoard {
     }
     if (this.detectIsDBClick(e.timeStamp)) {
       this.setDrawType('pointer', false)
-      this.tmpPolygon['id'] = this.generateUUID()
+      this.tmpPolygon['id'] = this.uuidv4Short()
       this.tmpPolygon['closed'] = true;
       this.pencilPosition = null;
       this.detectDrawsIsOverSize()
@@ -815,7 +769,6 @@ export default class sbBoard {
       }
       this.pencilPressing = false
     }
-
   }
   // 橡皮檫事件
   eraserDownFn(e){
@@ -1835,6 +1788,14 @@ export default class sbBoard {
     } else {
       return false;
     }
+  }
+  // 产生短id
+  uuidv4Short() {
+    return 'xxxx-4xxxyx'.replace(/[xy]/g, function(c) {
+      const r = (Math.random() * 16) | 0,
+        v = c == 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
   // 产生id
   generateUUID() {
