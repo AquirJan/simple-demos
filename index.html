@@ -167,26 +167,11 @@
   </div>
   <script type="module">
     // new mousePosition()
-    import recordActionHistory from './recordActionHistory.js'
     import sbBoard from './sbBoard.js'
+    // import cloneDeep from './lodash.clonedeep.js';
     let _historyRecordHandler = null;
     const initData = [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":""}]
-    function deepCopy(item) {
-      let _clone = null;
-      if (item.constructor === Object) {
-        _clone = {}
-        for(let key in item) {
-          _clone[key] = item[key]
-        }
-      }
-      if (item.constructor === Array) {
-        _clone = []
-        item.forEach(val => {
-          _clone.push(deepCopy(val))
-        })
-      }
-      return _clone
-    }
+    
     function bindEvent(btnId, cb) {
       const restoreBtn = document.getElementById(btnId)
       restoreBtn.addEventListener('click', (e)=>{
@@ -197,12 +182,6 @@
       const pop = document.createElement('div')
       pop.style.cssText = `width: 100px;height: 100px;position:fixed;top:${y}px;left:${x}px;z-index:100;background:darkslategray;`;
       document.body.appendChild(pop)
-    }
-    function initActionHistory(){
-      _historyRecordHandler = new recordActionHistory({
-        historyArray: [initData]
-      })
-      console.log(_historyRecordHandler.getHistoryArray())
     }
     let observer = false;
     const workbenchDom = document.getElementById('workbench');
@@ -223,7 +202,6 @@
       // width: document.body.clientWidth,
       // height: document.body.clientHeight
     })
-    initActionHistory()
 
     
     // sbBoardIns.setDrawType('polygon')
@@ -236,11 +214,7 @@
     sbBoardIns.getCanvasDom().addEventListener('mouseup', (e)=>{
       // settimeout作用等待插件自己身数据处理
       setTimeout(()=>{
-        if (e.button === 0) {
-          const _currentDraw = sbBoardIns.getSelectedDraw()
-          _historyRecordHandler.recordChange(sbBoardIns.exportDrawsData())
-          console.log(_historyRecordHandler.getHistoryArray())
-        } 
+         
       })
     })
     
@@ -290,38 +264,38 @@
     })
     bindEvent('onward', ()=>{
       // console.log('onward')
-      // sbBoardIns.onward()
-      if (!_historyRecordHandler) {
-        return;
-      }
-      _historyRecordHandler.onward()
-      const _data = _historyRecordHandler.getHistoryArray()[0]
-      if (!_data) {
-        console.log(`需要前进的数据有异常`);
-        return;
-      }
-      if (!sbBoardIns) {
-        return this.$Message.error('sbBoard 实例存在异常')
-      }
-      sbBoardIns.setDrawsData(_data)
+      sbBoardIns.onward()
+      // if (!_historyRecordHandler) {
+      //   return;
+      // }
+      // _historyRecordHandler.onward()
+      // const _data = _historyRecordHandler.getHistoryArray()[0]
+      // if (!_data) {
+      //   console.log(`需要前进的数据有异常`);
+      //   return;
+      // }
+      // if (!sbBoardIns) {
+      //   return this.$Message.error('sbBoard 实例存在异常')
+      // }
+      // sbBoardIns.setDrawsData(_data)
     })
     bindEvent('revoke', ()=>{
       // console.log('revoke')
-      // sbBoardIns.revoke()
-      if (!_historyRecordHandler) {
-        return;
-      }
-      _historyRecordHandler.revoke()
-      const _data = _historyRecordHandler.getHistoryArray()[0]
-      if (!_data) {
-        console.log(`需要撤销的数据有异常`);
-        return;
-      }
-      if (!sbBoardIns) {
-        return this.$Message.error('sbBoard 实例存在异常')
-      }
-      console.log(_historyRecordHandler.getHistoryArray())
-      sbBoardIns.setDrawsData(_data)
+      sbBoardIns.revoke()
+      // if (!_historyRecordHandler) {
+      //   return;
+      // }
+      // _historyRecordHandler.revoke()
+      // const _data = _historyRecordHandler.getHistoryArray()[0]
+      // if (!_data) {
+      //   console.log(`需要撤销的数据有异常`);
+      //   return;
+      // }
+      // if (!sbBoardIns) {
+      //   return this.$Message.error('sbBoard 实例存在异常')
+      // }
+      // console.log(_historyRecordHandler.getHistoryArray())
+      // sbBoardIns.setDrawsData(_data)
     })
     bindEvent('rect', ()=>{
       console.log('rect')

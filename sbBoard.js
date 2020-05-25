@@ -1,3 +1,4 @@
+import recordActionHistory from './recordActionHistory.js'
 export default class sbBoard {
   constructor(options) {
     this.options = Object.assign({
@@ -6,6 +7,7 @@ export default class sbBoard {
       style: {},
       wrapStyle: {},
       drawHistory: [],
+      recordHistory: true,
       pencilStyle: {
         strokeStyle: '#333',
         lineWidth: 2,
@@ -61,6 +63,8 @@ export default class sbBoard {
     this.prevCursor = '';
     this.rightPressing = null;
     this.hiddenDraws = false;
+    this.historyRecordHandler = null;
+    this.shouldRecord = false;
     return this.init()
   }
   // 初始化
@@ -105,9 +109,44 @@ export default class sbBoard {
     this.sbDom.oncontextmenu = (e)=>{
       e.preventDefault()
     }
+    if (this.options.recordHistory) {
+      this.initActionHistory()
+    }
 
     this.renderBoard()
     return this;
+  }
+  // 历史记录初始化
+  initActionHistory(){
+    this.historyRecordHandler = new recordActionHistory({
+      historyArray: [this.options.drawHistory]
+    })
+  }
+  // 历史记录操作,后退
+  revoke(){
+    if (!this.historyRecordHandler) {
+      return console.error(`历史操作记录实例不存在`);
+    }
+    this.historyRecordHandler.revoke()
+    const _data = this.historyRecordHandler.getHistoryArrayFirst()
+    if (!_data) {
+      console.error(`需要撤销的数据有异常`);
+      return;
+    }
+    this.setDrawsData(_data)
+  }
+  // 历史记录操作,前进
+  onward(){
+    if (!this.historyRecordHandler) {
+      return console.error(`历史操作记录实例不存在`);
+    }
+    this.historyRecordHandler.onward()
+    const _data = this.historyRecordHandler.getHistoryArrayFirst()
+    if (!_data) {
+      console.error(`需要前进的数据有异常`);
+      return;
+    }
+    this.setDrawsData(_data)
   }
   // 销毁
   destroy() {
@@ -509,6 +548,7 @@ export default class sbBoard {
   }
   pointerMoveFn(e){
     this.hoverDraw = null;
+    
     if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
@@ -564,6 +604,7 @@ export default class sbBoard {
         this.tmpRect['strokeStyle'] = 'transparent'
         this.tmpRect['lineWidth'] =  1
       }
+      this.shouldRecord = true;
     }
   }
   pointerUpFn(e){
@@ -655,6 +696,7 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
+    this.shouldRecord = true;
     this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle)
   }
   rectUpFn(e, options) {
@@ -1268,6 +1310,7 @@ export default class sbBoard {
       }
       this.selectedDraw = null;
       this.modifyRect = null;
+      this.historyRecordHandler.recordChange(this.getAllDraws())
     }
   }
   changeDrawPoints(index, coordinate='x', delta) {
@@ -1550,6 +1593,13 @@ export default class sbBoard {
         }
       }
     })
+    if (this.shouldRecord) {
+      console.log(this.shouldRecord)
+      this.historyRecordHandler.recordChange(this.getAllDraws())
+      this.shouldRecord = false;
+    }
+    
+    console.log(this.historyRecordHandler.getHistoryArray())
     this.renewSelectedDraw()
   }
   // 计算画笔是否在某个画图上

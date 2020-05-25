@@ -1,0 +1,19 @@
+{
+  "name": "self-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lodash.deepclone.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AquirJan/simple-demos.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AquirJan/simple-demos/issues"
+  },
+  "homepage": "https://github.com/AquirJan/simple-demos#readme"
+}

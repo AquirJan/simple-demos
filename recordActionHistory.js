@@ -1,10 +1,11 @@
+import cloneDeep from './lodash.clonedeep.js';
 export default class recordActionHistory {
   constructor(options) {
     this.options = Object.assign({
       recordName: '', // 是否使用特定名字
       useWindow: true, // 是否使用window对象存储历史操作
       historyArray: [], // 操作记录的历史数据
-    }, options);
+    }, cloneDeep(options));
     this.revokedStep = 0
     this.showoffHistoryArray = []
     this.historyActionArray = []
@@ -40,11 +41,11 @@ export default class recordActionHistory {
   }
   // 获取显示的历史操作数组
   getHistoryArray() {
-    return this.showoffHistoryArray
+    return cloneDeep(this.showoffHistoryArray)
   }
   // 获取最新一个
   getHistoryArrayFirst() {
-    return this.showoffHistoryArray && this.showoffHistoryArray.length ? this.showoffHistoryArray[0] : null;
+    return this.showoffHistoryArray && this.showoffHistoryArray.length ? cloneDeep(this.showoffHistoryArray[0]) : null;
   }
   // 获取当前步数
   getRevokedStep() {
@@ -52,12 +53,12 @@ export default class recordActionHistory {
   }
   // 记录历史变化
   recordChange(data) {
-    this.historyActionArray.splice(this.revokedStep, 0, data)
+    this.historyActionArray.splice(this.revokedStep, 0, cloneDeep(data))
     if (this.revokedStep !== 0) {
       this.historyActionArray = this.historyActionArray.slice(-(this.historyActionArray.length-this.revokedStep))
       this.revokedStep = 0;
     }
-    this.showoffHistoryArray = this.historyActionArray.slice()
+    this.showoffHistoryArray = cloneDeep(this.historyActionArray)
   }
   // 初始化
   init() {
