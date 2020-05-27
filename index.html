@@ -186,16 +186,16 @@
     let observer = false;
     const workbenchDom = document.getElementById('workbench');
     const sbBoardIns = new sbBoard({
-      wrapStyle:{
-        // position: 'absolute',
-      },
-      pencilStyle: {
-        strokeStyle: 'red',
-        lineWidth: 3,
-        brushSize: 50,
-        brushColor: 'green'
-      },
-      drawHistory: initData,
+      // wrapStyle:{
+      //   // position: 'absolute',
+      // },
+      // pencilStyle: {
+      //   strokeStyle: 'red',
+      //   lineWidth: 3,
+      //   brushSize: 50,
+      //   brushColor: 'green'
+      // },
+      // drawHistory: initData,
       wrap:workbenchDom
       // width: document.body.clientWidth,
       // height: document.body.clientHeight
@@ -203,7 +203,7 @@
 
     
     // sbBoardIns.setDrawType('polygon')
-    // sbBoardIns.setDrawsData([{"x":1532,"y":472,"ways":[{"x":2423,"y":231},{"x":1955,"y":0},{"x":1581,"y":0}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
+    sbBoardIns.setDrawsData([{"x":1532,"y":472,"ways":[{"x":2423,"y":231},{"x":1955,"y":0},{"x":1581,"y":0}],"type":"polygon","closed":true,"id":"1dc90d17-d563-4aff-87be-4d18631ace30","width":0,"height":0},{"x":1690,"y":2261,"width":340,"height":217,"type":"rect","id":"68884ea5-f4f8-4554-9fde-899984dd2b37"}])
     sbBoardIns.setBackground({src:'./pcb_demo.jpg'})
     // sbBoardIns.setExistBrush({src:'./pcb_brush.png'})
     // sbBoardIns.setObserverMode(true);
@@ -344,7 +344,7 @@
       
       // // img.src=sbBoardIns.exportDrawsPic()
       setTimeout(async ()=>{
-        const b64 = await sbBoardIns.exportPic({type: 'brush', file: false, quality: 0.4})
+        const b64 = await sbBoardIns.exportPic({type: 'fusion', file: false, quality: 0.4})
         // console.log(b64)
         const img = new Image()
         document.body.appendChild(img)
