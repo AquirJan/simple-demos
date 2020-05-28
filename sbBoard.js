@@ -67,6 +67,7 @@ export default class sbBoard {
     this.hiddenDraws = false;
     this.historyRecordHandler = null;
     this.shouldRecord = false;
+    this.isHandMove = false;
     return this.init()
   }
   // 初始化
@@ -146,7 +147,6 @@ export default class sbBoard {
     this.renderBoard()
     return this;
   }
-
   // 历史记录初始化
   initActionHistory(historys){
     this.historyRecordHandler = new recordActionHistory({
@@ -215,6 +215,15 @@ export default class sbBoard {
   setObserverMode(isObserver=true){
     this.selectedDraw = null;
     this.isObserver = isObserver
+  }
+  // 设置拖拉模式, 单纯只能做拖动画面用
+  setHandMove(isHandMove = true) {
+    this.isHandMove = isHandMove;
+    if (this.zoomSize !== this.bgObj.scaled && this.isHandMove) {
+      this.selectedDraw = null;
+    } else {
+      this.isHandMove = false;
+    }
   }
   // 设置背景图
   async setBackground(obj) {
@@ -556,7 +565,7 @@ export default class sbBoard {
           }
         }
       } else {
-        if (this.spaceBar && !this.draging) {
+        if (this.spaceBar && !this.draging && this.zoomSize !== this.bgObj.scaled) {
           this.pencilPressing = true;
           this.draging = true;
           this.dragDownPoint = {
@@ -576,7 +585,8 @@ export default class sbBoard {
         }
       }
     }
-    if (e.button === 2 ) {
+    if (e.button === 2 || (this.isHandMove && e.button === 0 && this.zoomSize !== this.bgObj.scaled)) {
+      document.documentElement.style.cursor = this.isHandMove ? 'grabbing' : 'default'
       if (!this.draging) {
         this.rightPressing = true;
         this.pencilPressing = true;
@@ -587,6 +597,7 @@ export default class sbBoard {
         }
         return;
       }
+      
       if (!this.isObserver) {
         this.findOutFoucusDraw()
 
@@ -1480,14 +1491,12 @@ export default class sbBoard {
     const keycode = e.keyCode;
     // console.log(keycode)
     if ( keycode === 18 ) {
-      // shift
       this.altKey = true;
       e.preventDefault()
       e.stopPropagation()
       return;
     }
     if ( keycode === 16 ) {
-      // shift
       this.shiftKey = true;
       e.preventDefault()
       e.stopPropagation()
@@ -1512,7 +1521,7 @@ export default class sbBoard {
       }
       return;
     }
-    if (keycode === 32){
+    if (keycode === 32 && this.zoomSize !== this.bgObj.scaled){
       // 空格
       this.spaceBar = true;
       document.documentElement.style.cursor = 'grabbing'
