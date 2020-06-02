@@ -113,6 +113,7 @@ export default class sbBoard {
     this.sbDom.style.cssText = JSON.stringify(canvasDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbWrap.style.cssText = JSON.stringify(wrapDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbCtx = this.sbDom.getContext('2d')
+    this.sbCtx.font = "PingFang SC, Microsoft YaHei, Helvetica, Helvetica Neue, Hiragino Sans GB, Arial, sans-serif";
     this.sbWrap.appendChild(this.sbDom)
     
     this.setDrawsData(this.options.drawHistory)
@@ -120,6 +121,9 @@ export default class sbBoard {
     
     document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
     document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
+    document.body.addEventListener('mouseout', (e)=>{
+      document.documentElement.style.cursor = 'default'
+    }, false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
     this.sbDom.oncontextmenu = (e)=>{
       e.preventDefault()
@@ -366,6 +370,9 @@ export default class sbBoard {
       }
     })
   }
+  clearDrawsHistory() {
+    
+  }
   // 工具栏用方法
   // 清除
   clearWhole(publicUse = true) {
@@ -440,6 +447,12 @@ export default class sbBoard {
       }
     }
     this.zoomSize = this.bgObj ? this.bgObj.scaled : 1;
+  }
+  getZoomSize(){
+    return {
+      current: this.zoomSize,
+      default: this.bgObj ? this.bgObj.scaled : 1
+    }
   }
   // 放大
   zoomIn(step=0.05) {
@@ -516,14 +529,16 @@ export default class sbBoard {
   getPointerPosition(){
     return this.hoverPoint;
   }
-  findOutFoucusDraw(){
+  findOutFoucusDraw(e){
     this.tinkerUp = null;
     if (this.selectedDraw) {
       // 判断是否单选情况
       if (this.selectedDraw.constructor === Object) {
         const _item = JSON.parse(JSON.stringify(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)))
-        if (_item && this.selectedDraw.index !== _item.index) {
+        if (_item && (this.selectedDraw.index !== _item.index || this.selectedDraw.pointIn !== _item.pointIn)) {
           this.selectedDraw = _item
+        } else if(this.selectedDraw.pointIn && _item ===null) {
+          delete this.selectedDraw.pointIn;
         }
       }
       for(let i=0;i<this.controlDots.length;i++) {
@@ -556,7 +571,7 @@ export default class sbBoard {
       }
       if (this.ctrlKey) {
         if (this.selectedDraw && !this.isObserver) {
-          const _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+          let _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
           if (this.selectedDraw.constructor === Array && _item) {
             this.selectedDraw.push(JSON.parse(JSON.stringify(_item)))
           }
@@ -575,7 +590,7 @@ export default class sbBoard {
           return;
         }
         if (!this.isObserver) {
-          this.findOutFoucusDraw()
+          this.findOutFoucusDraw(e)
 
           if (this.pencilPressing) {
             return;
@@ -599,7 +614,7 @@ export default class sbBoard {
       }
       
       if (!this.isObserver) {
-        this.findOutFoucusDraw()
+        this.findOutFoucusDraw(e)
 
         if (this.pencilPressing) {
           return;
@@ -648,15 +663,18 @@ export default class sbBoard {
           // console.log('调整尺寸')
           // 调整尺寸
           if (this.selectedDraw.constructor === Object) {
+            this.selectedDraw['changed'] = true;
             this.adjustSize(this.selectedDraw)
           }
         } else {
           // 整体移动
           if (this.selectedDraw.constructor === Object) {
+            this.selectedDraw['changed'] = true;
             this.drawPointsWholeMove(this.selectedDraw, this.hoverPoint.x, this.hoverPoint.y)
           }
           if (this.selectedDraw.constructor === Array) {
             this.selectedDraw.forEach(val => {
+              val['changed'] = true;
               this.drawPointsWholeMove(val, this.hoverPoint.x, this.hoverPoint.y)
             })
           }
@@ -665,6 +683,7 @@ export default class sbBoard {
         this.drawRect(this.hoverPoint.x, this.hoverPoint.y)
         this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)'
         this.tmpRect['strokeStyle'] = 'transparent'
+        this.tmpRect['type'] = 'select'
         this.tmpRect['lineWidth'] =  1
       }
       this.shouldRecord = true;
@@ -727,7 +746,7 @@ export default class sbBoard {
         // 记录操作
         if (this.shouldRecord) {
           if (this.options.recordWidthLabel) {
-            if (this.selectedDraw.data.label) {
+            if (this.selectedDraw && this.selectedDraw.constructor === Object && this.selectedDraw.data.label) {
               this.historyRecordHandler.recordChange(this.getAllDraws())
             }
           } else {
@@ -747,7 +766,7 @@ export default class sbBoard {
           }
           this.tmpRect['width'] = Math.abs(this.tmpRect.width)
           this.tmpRect['height'] = Math.abs(this.tmpRect.height)
-          console.dir(this.tmpRect)
+          
           // 检测有哪些draw在框选框内
           this.selectedDraw = this.detectDrawsOver()
           this.tmpRect = null;
@@ -818,7 +837,6 @@ export default class sbBoard {
       if (this.shouldRecord) {
         if (this.options.recordWidthLabel) {
           if (this.selectedDraw.data.label) {
-            console.log('rect label')
             this.historyRecordHandler.recordChange(this.getAllDraws())
           }
         }
@@ -1108,7 +1126,10 @@ export default class sbBoard {
         
         break;
     }
+    // console.log(item.strokeStyle)
+    // this.sbCtx.fillStyle = item.strokeStyle || '#2ac2e4';
     this.sbCtx.fillStyle = '#2ac2e4';
+    // this.sbCtx.strokeStyle = '#fff'
     this.controlDots.forEach(val => {
       const circle = this.drawModifyDot(val)
       this.sbCtx.fill(circle);
@@ -1146,9 +1167,11 @@ export default class sbBoard {
       const _fontOriginSize = _fontSize/zoomSize
       const _paddingLeft = 2/zoomSize;
       const _y = rect.y+_fontSize/zoomSize
+      let _x = 0;
+      let _width = 0;
       if (rect.width && rect.width > 50/zoomSize) {
-        const _width = rect.width/2
-        const _x = rect.x+_width;
+        _width = rect.width/2
+        _x = rect.x+_width;
         const _fx = _x + _paddingLeft
         this.sbCtx.fillRect(_x, rect.y, _width, _height);
         this.sbCtx.font=`${_fontOriginSize}px Arial`;
@@ -1156,14 +1179,22 @@ export default class sbBoard {
         this.sbCtx.fillText(this.fittingString(this.sbCtx, rect.label, _width-_paddingLeft), _fx, _y);
       } else if (!rect.width) {
         const _strWidth = this.sbCtx.measureText(rect.label).width;
-        const _width = _strWidth+ 6/zoomSize
-        const _x = rect.x;
+        _width = _strWidth+ 6/zoomSize
+        _x = rect.x;
         const _fx = _x + _paddingLeft
         this.sbCtx.fillRect(_x, rect.y, _width, _height);
         this.sbCtx.font=`${_fontOriginSize}px Arial`;
         this.sbCtx.fillStyle = "#fff"
         this.sbCtx.fillText(rect.label, _fx, _y);
       }
+      return {
+        x:_x, 
+        y: rect.y, 
+        width: _width, 
+        height: _height
+      }
+    } else {
+      return null;
     }
   }
   // 在Draw外绘制标签
@@ -1381,6 +1412,7 @@ export default class sbBoard {
   // 滚动缩放
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
+    // console.log(this.ctrlKey, this.altKey)
     if ((this.ctrlKey || this.altKey) && Math.abs(_wheelDelta) > 0) {
       if (_wheelDelta > 0) {
         this.zoomIn(0.020)
@@ -1442,14 +1474,14 @@ export default class sbBoard {
   // 监听键盘按键释放
   sbDomKeyup(e) {
     const keycode = e.keyCode;
-    if (keycode === 32){
-      // 空格
-      this.spaceBar = false;
-      document.documentElement.style.cursor = 'default'
-      e.preventDefault()
-      e.stopPropagation()
-      return;
-    }
+    // if (keycode === 32){
+    //   // 空格
+    //   this.spaceBar = false;
+    //   document.documentElement.style.cursor = 'default'
+    //   e.preventDefault()
+    //   e.stopPropagation()
+    //   return;
+    // }
     if ( keycode === 18 ) {
       // alt
       this.altKey = false;
@@ -1521,17 +1553,17 @@ export default class sbBoard {
       }
       return;
     }
-    if (keycode === 32 && this.zoomSize !== this.bgObj.scaled){
-      // 空格
-      this.spaceBar = true;
-      document.documentElement.style.cursor = 'grabbing'
-      if (this.drawType!=='pointer'){
-        this.setDrawType('pointer')
-      }
-      e.preventDefault()
-      e.stopPropagation()
-      return;
-    }
+    // if (keycode === 32 && this.zoomSize !== this.bgObj.scaled){
+    //   // 空格
+    //   this.spaceBar = true;
+    //   document.documentElement.style.cursor = 'grabbing'
+    //   if (this.drawType!=='pointer'){
+    //     this.setDrawType('pointer')
+    //   }
+    //   e.preventDefault()
+    //   e.stopPropagation()
+    //   return;
+    // }
     if (this.selectedDraw) {
       const _stepDelta = e.shiftKey ? 10 : 1;
       const _step = this.normalFloat(_stepDelta/this.zoomSize)
@@ -1718,7 +1750,8 @@ export default class sbBoard {
           if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
             _flag = {
               data: _item,
-              index: i
+              index: i,
+              pointIn: 'stroke'
             }
           }
           break;
@@ -1727,14 +1760,33 @@ export default class sbBoard {
           if(this.sbCtx.isPointInStroke(_svgPath2d, x, y)){
             _flag = {
               data: _item,
-              index: i
+              index: i,
+              pointIn: 'stroke'
             }
           }
           break;
       }
+      // 判断鼠标是否在label上
+      if (!_flag && _item.label) {
+        const _tmpLabelRect = new Path2D()
+        const labelRect = this.labelRect(_item, this.zoomSize, this.isObserver)
+        _tmpLabelRect.rect(
+          labelRect.x,
+          labelRect.y,
+          labelRect.width,
+          labelRect.height
+        )
+        if(this.sbCtx.isPointInPath(_tmpLabelRect, x, y)){
+          _flag = {
+            data: _item,
+            index: i,
+            pointIn: 'label'
+          }
+        }
+      }
       if (_flag) {
         break;
-      }
+      } 
     }
     return _flag;
   }
@@ -1995,7 +2047,7 @@ export default class sbBoard {
     this.tmpPolygon['closed'] = closed;
   }
   // 绘画矩形
-  drawRect(cx, cy, label, strokeStyle) {
+  drawRect(cx, cy, label, strokeStyle, zIndex=1) {
     const _ds = this.getDeltaSize(cx, cy)
     const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
     const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
@@ -2005,6 +2057,7 @@ export default class sbBoard {
       width: _ds.width, 
       height: _ds.height,
       type: 'rect',
+      zIndex,
       label,
       strokeStyle
     }
