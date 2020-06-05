@@ -349,15 +349,15 @@
       
       // // img.src=sbBoardIns.exportDrawsPic()
       setTimeout(async ()=>{
-        const b64 = await sbBoardIns.exportPic({type: 'fusion'})
-        console.log(b64)
-        const downLink = document.createElement('a')
-        // const img = new Image()
-        // document.body.appendChild(img)
-        // img.src=b64
-        // img.style.cssText="display:block;width:100%"
-        // document.body.style.position = 'relative'
-        // mask.remove()
+        const b64 = await sbBoardIns.exportPic({type: 'fusion', file:false})
+        // console.log(b64)
+        // const downLink = document.createElement('a')
+        const img = new Image()
+        document.body.appendChild(img)
+        img.src=b64
+        img.style.cssText="display:block;width:100%"
+        document.body.style.position = 'relative'
+        mask.remove()
       }, 100)
     })
     

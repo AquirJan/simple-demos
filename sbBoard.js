@@ -1354,9 +1354,10 @@ export default class sbBoard {
     }
   }
   // 绘制标签
-  labelRect(rect, zoomSize=1, isObserver=false) {
+  labelRect(rect, zoomSize=1, isObserver=false, ctx) {
+    const _ctx = ctx ? ctx : this.sbCtx
     if (rect.label && !isObserver) {
-      this.sbCtx.fillStyle = rect.strokeStyle || this.options.pencilStyle.strokeStyle
+      _ctx.fillStyle = rect.strokeStyle || this.options.pencilStyle.strokeStyle
       const _fontSize = 14;
       const _height = (_fontSize+4)/zoomSize;
       const _fontOriginSize = _fontSize/zoomSize
@@ -1368,19 +1369,19 @@ export default class sbBoard {
         _width = rect.width < 50/zoomSize ? rect.width : rect.width/2
         _x = rect.width < 50/zoomSize ? rect.x : rect.x+_width;
         const _fx = _x + _paddingLeft
-        this.sbCtx.fillRect(_x, rect.y, _width, _height);
-        this.sbCtx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
-        this.sbCtx.fillStyle = "#fff"
-        this.sbCtx.fillText(this.fittingString(this.sbCtx, rect.label, _width-_paddingLeft), _fx, _y);
+        _ctx.fillRect(_x, rect.y, _width, _height);
+        _ctx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
+        _ctx.fillStyle = "#fff"
+        _ctx.fillText(this.fittingString(_ctx, rect.label, _width-_paddingLeft), _fx, _y);
       } else if (!rect.width) {
-        const _strWidth = this.sbCtx.measureText(rect.label).width;
+        const _strWidth = _ctx.measureText(rect.label).width;
         _width = _strWidth+ 6/zoomSize
         _x = rect.x;
         const _fx = _x + _paddingLeft
-        this.sbCtx.fillRect(_x, rect.y, _width, _height);
-        this.sbCtx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
-        this.sbCtx.fillStyle = "#fff"
-        this.sbCtx.fillText(rect.label, _fx, _y);
+        _ctx.fillRect(_x, rect.y, _width, _height);
+        _ctx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
+        _ctx.fillStyle = "#fff"
+        _ctx.fillText(rect.label, _fx, _y);
       }
       const _coordinate = {
         x: _x, 
@@ -2075,6 +2076,9 @@ export default class sbBoard {
                   val.width,
                   val.height
                 );
+                if (val.label){
+                  this.labelRect(val, this.zoomSize, this.isObserver, _canvasCtx);
+                }
                 break;
               case "polygon":
                 _canvasCtx.beginPath();
