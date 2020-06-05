@@ -591,6 +591,17 @@ export default class sbBoard {
       if (this.selectedDraw) {
         this.selectedDraw['changed'] = false;
       }
+      let _flag = false;
+      const _draws = this.getAllDraws()
+      for(let i=0;i<_draws.length;i++) {
+        if (!_draws[i].label) {
+          _flag = true;
+          break;
+        }
+      }
+      if (_flag) {
+        this.setDrawsData(this.getAllDraws().filter(val=>val.label), false)
+      }
     } else if (e.button === 2) {
       document.documentElement.style.cursor = 'grabbing'
       this.pencilPressing = true;
@@ -612,11 +623,16 @@ export default class sbBoard {
       return;
     }
     if (!this.pencilPosition) {
-      // console.log('no')
+      if (this.selectedDraw && !this.selectedDraw.lock) {
+        this.selectedDraw = null;
+      }
       const _onSomeOneRectFlag = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y) 
       document.documentElement.style.cursor = _onSomeOneRectFlag ? 'move' : 'crosshair'
       if (_onSomeOneRectFlag) {
-        this.selectedDraw = cloneDeep(_onSomeOneRectFlag)
+        if (!this.selectedDraw || (this.selectedDraw && !this.selectedDraw.lock) || (this.selectedDraw && this.selectedDraw.lock && this.selectedDraw.data.id !== _onSomeOneRectFlag.data.id)) {
+          this.selectedDraw = cloneDeep(_onSomeOneRectFlag)
+        }
+        
         this.tinkerUp = null;
         for(let i=0;i<this.controlDots.length;i++) {
           const _dot = this.controlDots[i];
@@ -627,8 +643,6 @@ export default class sbBoard {
             break;
           }
         }
-      } else {
-        this.selectedDraw = null;
       }
     } else {
       if (!this.pencilPressing) {
@@ -675,6 +689,9 @@ export default class sbBoard {
       this.detectDrawsIsOverSize()
       if (this.selectedDraw.changed && this.historyRecordHandler) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
+      }
+      if (!this.selectedDraw.changed) {
+        this.selectedDraw['lock'] = true;
       }
     } else {
       let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle)
