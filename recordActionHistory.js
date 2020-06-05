@@ -3,7 +3,6 @@ export default class recordActionHistory {
   constructor(options) {
     this.options = Object.assign({
       recordName: '', // 是否使用特定名字
-      useWindow: true, // 是否使用window对象存储历史操作
       historyArray: [], // 操作记录的历史数据
     }, cloneDeep(options));
     this.revokedStep = 0
@@ -23,7 +22,6 @@ export default class recordActionHistory {
   }
   // 前进
   onward() {
-    
     this.revokedStep = this.revokedStep - 1;
     if (this.revokedStep < 0){
       this.revokedStep = 0
@@ -39,6 +37,10 @@ export default class recordActionHistory {
   // 获取显示的历史操作数组
   getHistoryArray() {
     return cloneDeep(this.showoffHistoryArray)
+  }
+  // 获取显示的历史操作数组长度
+  getHistoryArrayLength() {
+    return this.showoffHistoryArray.length
   }
   // 获取最新一个
   getHistoryArrayFirst() {
@@ -60,14 +62,6 @@ export default class recordActionHistory {
   // 初始化
   init() {
     this.historyActionArray = this.options.historyArray
-    if (this.options.useWindow) {
-      if (window[this.options.recordName]) {
-        console.warn('改变量名已被使用')
-        return null;
-      } else {
-        return window[this.options.recordName]
-      }
-    }
 
     return this
   }

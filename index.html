@@ -121,7 +121,7 @@
       </li>
       <!-- 后退 -->
       <li class="tools-list-item">
-        <button id="revoke">revoke</button>
+        <button id="revoke" >revoke</button>
       </li>
       <!-- 圆形 -->
       <!-- <li class="tools-list-item">
@@ -176,9 +176,9 @@
   <script type="module">
     // new mousePosition()
     import sbBoard from './sbBoard.js'
-    // import cloneDeep from './lodash.clonedeep.js';
+    
     let _historyRecordHandler = null;
-    const initData = [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":""}]
+    const initData = [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":"adsfb"}]
     
     function bindEvent(btnId, cb) {
       const restoreBtn = document.getElementById(btnId)
@@ -271,39 +271,20 @@
       sbBoardIns.zoomReset()
     })
     bindEvent('onward', ()=>{
-      // console.log('onward')
-      sbBoardIns.onward()
-      // if (!_historyRecordHandler) {
-      //   return;
-      // }
-      // _historyRecordHandler.onward()
-      // const _data = _historyRecordHandler.getHistoryArray()[0]
-      // if (!_data) {
-      //   console.log(`需要前进的数据有异常`);
-      //   return;
-      // }
-      // if (!sbBoardIns) {
-      //   return this.$Message.error('sbBoard 实例存在异常')
-      // }
-      // sbBoardIns.setDrawsData(_data)
+      console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
+      if (sbBoardIns.getHistoryRecordsLength()>0 && sbBoardIns.getRevokedStep() > 0) {
+        sbBoardIns.onward()
+      } else {
+        console.log('can not onward')
+      }
     })
     bindEvent('revoke', ()=>{
-      // console.log('revoke')
-      sbBoardIns.revoke()
-      // if (!_historyRecordHandler) {
-      //   return;
-      // }
-      // _historyRecordHandler.revoke()
-      // const _data = _historyRecordHandler.getHistoryArray()[0]
-      // if (!_data) {
-      //   console.log(`需要撤销的数据有异常`);
-      //   return;
-      // }
-      // if (!sbBoardIns) {
-      //   return this.$Message.error('sbBoard 实例存在异常')
-      // }
-      // console.log(_historyRecordHandler.getHistoryArray())
-      // sbBoardIns.setDrawsData(_data)
+      console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
+      if (sbBoardIns.getHistoryRecordsLength() > 1 ) {
+        sbBoardIns.revoke()
+      } else {
+        console.log('can not revoke')
+      }
     })
     bindEvent('rect', ()=>{
       console.log('rect')

@@ -166,6 +166,9 @@ export default class sbBoard {
   getHistoryRecords(){
     return this.historyRecordHandler.getHistoryArray()
   }
+  getHistoryRecordsLength(){
+    return this.historyRecordHandler.getHistoryArrayLength()
+  }
   // 获取历史操作记录
   getRevokedStep(){
     return this.historyRecordHandler.getRevokedStep()
@@ -182,7 +185,6 @@ export default class sbBoard {
     }
     this.historyRecordHandler.revoke()
     const _data = this.historyRecordHandler.getHistoryArrayFirst()
-    console.log(_data)
     if (!_data) {
       console.error(`需要撤销的数据有异常`);
       return;
@@ -196,7 +198,6 @@ export default class sbBoard {
     }
     this.historyRecordHandler.onward()
     const _data = this.historyRecordHandler.getHistoryArrayFirst()
-    console.log(_data)
     if (!_data) {
       console.error(`需要前进的数据有异常`);
       return;
@@ -665,7 +666,7 @@ export default class sbBoard {
     if (this.selectedDraw) {
       this.validateRect()
       this.detectDrawsIsOverSize()
-      if (this.selectedDraw.changed && this.options.recordWithLabel && this.selectedDraw.data.label) {
+      if (this.selectedDraw.changed) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
     } else {
@@ -698,7 +699,6 @@ export default class sbBoard {
         }
       }
     }
-    
 
     this.pencilPressing = false;
     this.pencilPosition = null;
