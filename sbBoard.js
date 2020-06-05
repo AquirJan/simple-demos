@@ -626,24 +626,27 @@ export default class sbBoard {
       if (this.selectedDraw && !this.selectedDraw.lock) {
         this.selectedDraw = null;
       }
-      const _onSomeOneRectFlag = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y) 
-      document.documentElement.style.cursor = _onSomeOneRectFlag ? 'move' : 'crosshair'
-      if (_onSomeOneRectFlag) {
-        if (!this.selectedDraw || (this.selectedDraw && !this.selectedDraw.lock) || (this.selectedDraw && this.selectedDraw.lock && this.selectedDraw.data.id !== _onSomeOneRectFlag.data.id)) {
-          this.selectedDraw = cloneDeep(_onSomeOneRectFlag)
-        }
-        
-        this.tinkerUp = null;
-        for(let i=0;i<this.controlDots.length;i++) {
-          const _dot = this.controlDots[i];
-          const _dotPath2d = this.drawModifyDot(_dot);
-          if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
-            document.documentElement.style.cursor = _dot.cursor;
-            this.tinkerUp = { code: _dot.code };
-            break;
+      if (!this.hiddenDraws) {
+        const _onSomeOneRectFlag = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y) 
+        document.documentElement.style.cursor = _onSomeOneRectFlag ? 'move' : 'crosshair'
+        if (_onSomeOneRectFlag) {
+          if (!this.selectedDraw || (this.selectedDraw && !this.selectedDraw.lock) || (this.selectedDraw && this.selectedDraw.lock && (this.selectedDraw.data.id !== _onSomeOneRectFlag.data.id || (this.selectedDraw.data.id === _onSomeOneRectFlag.data.id && this.selectedDraw.pointIn !== _onSomeOneRectFlag.pointIn)))) {
+            this.selectedDraw = cloneDeep(_onSomeOneRectFlag)
+          }
+          
+          this.tinkerUp = null;
+          for(let i=0;i<this.controlDots.length;i++) {
+            const _dot = this.controlDots[i];
+            const _dotPath2d = this.drawModifyDot(_dot);
+            if (this.sbCtx.isPointInPath(_dotPath2d, this.hoverPoint.x, this.hoverPoint.y)) {
+              document.documentElement.style.cursor = _dot.cursor;
+              this.tinkerUp = { code: _dot.code };
+              break;
+            }
           }
         }
       }
+      
     } else {
       if (!this.pencilPressing) {
         return;
