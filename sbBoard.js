@@ -164,19 +164,24 @@ export default class sbBoard {
   }
   // 获取历史操作记录
   getHistoryRecords(){
-    return this.historyRecordHandler.getHistoryArray()
+    return this.historyRecordHandler ? this.historyRecordHandler.getHistoryArray() : []
   }
   getHistoryRecordsLength(){
-    return this.historyRecordHandler.getHistoryArrayLength()
+    return this.historyRecordHandler ? this.historyRecordHandler.getHistoryArrayLength() : 0
   }
   // 获取历史操作记录
   getRevokedStep(){
-    return this.historyRecordHandler.getRevokedStep()
+    return this.historyRecordHandler ? this.historyRecordHandler.getRevokedStep() : 0
   }
   // 清空历史操作
   reinitRecordHistory(historys) {
-    delete this.historyRecordHandler
-    this.initActionHistory(historys)
+    return new Promise((resolve) => {
+      delete this.historyRecordHandler
+      setTimeout(()=> {
+        this.initActionHistory(historys)
+        resolve(true)
+      }, 300)
+    })
   }
   // 历史记录操作,后退
   revoke(){
@@ -483,13 +488,16 @@ export default class sbBoard {
       this.originDraws[draws.index]['strokeStyle'] = strokeStyle;
     }
     // 记录操作
-    if (this.options.recordWithLabel) {
-      if (this.originDraws[draws.index].label) {
+    if (this.historyRecordHandler) {
+      if (this.options.recordWithLabel) {
+        if (this.originDraws[draws.index].label) {
+          this.historyRecordHandler.recordChange(this.getAllDraws())
+        }
+      } else {
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
-    } else {
-      this.historyRecordHandler.recordChange(this.getAllDraws())
     }
+    
     // 神奇的显示隐藏功能
     if (this.hiddenDraws){
       this.selectedDraw = null;
@@ -583,7 +591,6 @@ export default class sbBoard {
       if (this.selectedDraw) {
         this.selectedDraw['changed'] = false;
       }
-      // this.setDrawsData(this.getAllDraws().filter(val=>val.label), false)
     } else if (e.button === 2) {
       document.documentElement.style.cursor = 'grabbing'
       this.pencilPressing = true;
@@ -666,7 +673,7 @@ export default class sbBoard {
     if (this.selectedDraw) {
       this.validateRect()
       this.detectDrawsIsOverSize()
-      if (this.selectedDraw.changed) {
+      if (this.selectedDraw.changed && this.historyRecordHandler) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
     } else {
@@ -691,18 +698,28 @@ export default class sbBoard {
         this.detectDrawsIsOverSize()
         this.selectedDraw = cloneDeep({
           data: this.originDraws[this.originDraws.length-1],
-          index: (this.originDraws.length-1)
+          index: (this.originDraws.length-1),
+          newadd: true
         })
         // 是否需要记录操作
-        if (this.selectedDraw.data.label) {
-          this.historyRecordHandler.recordChange(this.getAllDraws())
-        }
+        // if (this.selectedDraw.data.label && this.historyRecordHandler) {
+        //   this.historyRecordHandler.recordChange(this.getAllDraws())
+        // }
       }
     }
 
     this.pencilPressing = false;
     this.pencilPosition = null;
+
+    this.sbDom.dispatchEvent(new CustomEvent('tycrectUp', { bubbles: true, detail: {
+      draw: this.selectedDraw,
+      point: {
+        x: e.clientX,
+        y: e.clientY
+      }
+    }}))
   }
+  
   // 修正翻转调整后的坐标错误偏差
   validateRect() {
     if (this.selectedDraw.constructor === Object) {
@@ -924,7 +941,7 @@ export default class sbBoard {
         this.validateRect()
         this.detectDrawsIsOverSize()
         // 记录操作
-        if (this.shouldRecord) {
+        if (this.shouldRecord && this.historyRecordHandler) {
           if (this.options.recordWithLabel) {
             if (this.selectedDraw && this.selectedDraw.constructor === Object && this.selectedDraw.data.label) {
               this.historyRecordHandler.recordChange(this.getAllDraws())
@@ -1014,10 +1031,10 @@ export default class sbBoard {
         data: this.originDraws[this.originDraws.length-1],
         index: (this.originDraws.length-1)
       })
-      if (this.options.recordWithLabel && this.selectedDraw.data.label) {
+      if (this.historyRecordHandler && this.options.recordWithLabel && this.selectedDraw.data.label) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
-      if (!this.options.recordWithLabel) {
+      if (!this.options.recordWithLabel && this.historyRecordHandler) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
     }
@@ -1332,7 +1349,7 @@ export default class sbBoard {
   setDrawsData(data, record=true) {
     this.selectedDraw = null;
     this.originDraws = data;
-    if (record) {
+    if (record && this.historyRecordHandler) {
       this.historyRecordHandler.recordChange(this.getAllDraws())
     }
   }
@@ -1347,9 +1364,9 @@ export default class sbBoard {
       const _y = rect.y+_fontSize/zoomSize
       let _x = 0;
       let _width = 0;
-      if (rect.width && rect.width > 50/zoomSize) {
-        _width = rect.width/2
-        _x = rect.x+_width;
+      if (rect.width) {
+        _width = rect.width < 50/zoomSize ? rect.width : rect.width/2
+        _x = rect.width < 50/zoomSize ? rect.x : rect.x+_width;
         const _fx = _x + _paddingLeft
         this.sbCtx.fillRect(_x, rect.y, _width, _height);
         this.sbCtx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
@@ -1620,7 +1637,10 @@ export default class sbBoard {
       }
       this.selectedDraw = null;
       this.modifyRect = null;
-      this.historyRecordHandler.recordChange(this.getAllDraws())
+      if (this.historyRecordHandler) {
+        this.historyRecordHandler.recordChange(this.getAllDraws())
+      }
+      
     }
   }
   changeDrawPoints(index, coordinate='x', delta) {
@@ -1688,7 +1708,7 @@ export default class sbBoard {
       this.deleteSelectedDraw()
     }
     this.detectDrawsIsOverSize()
-    if (this.shouldRecord) {
+    if (this.shouldRecord && this.historyRecordHandler) {
       if (this.options.recordWithLabel) {
         if (this.selectedDraw && this.selectedDraw.constructor === Object && this.selectedDraw.data && this.selectedDraw.data.label) {
           this.historyRecordHandler.recordChange(this.getAllDraws())
