@@ -116,8 +116,12 @@ export default class sbBoard {
     this.sbWrap.style.cssText = JSON.stringify(wrapDefaultStyle).replace(/"*,"/gi, ";").replace(/({)|(})|(")/gi, "");
     this.sbCtx = this.sbDom.getContext('2d')
     this.sbWrap.appendChild(this.sbDom)
+
+    if (this.options.recordHistory) {
+      this.initActionHistory(this.options.drawHistory)
+    }
+    this.setDrawsData(this.options.drawHistory, false)
     
-    this.setDrawsData(this.options.drawHistory)
     this.setDrawType('pointer')
     
     document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
@@ -154,7 +158,7 @@ export default class sbBoard {
   }
   // 历史记录初始化
   initActionHistory(historys){
-    this.historyRecordHandler = new recordActionHistory({
+    this['historyRecordHandler'] = new recordActionHistory({
       historyArray: [historys]
     })
   }
@@ -168,6 +172,7 @@ export default class sbBoard {
   }
   // 清空历史操作
   reinitRecordHistory(historys) {
+    delete this.historyRecordHandler
     this.initActionHistory(historys)
   }
   // 历史记录操作,后退
@@ -177,6 +182,7 @@ export default class sbBoard {
     }
     this.historyRecordHandler.revoke()
     const _data = this.historyRecordHandler.getHistoryArrayFirst()
+    console.log(_data)
     if (!_data) {
       console.error(`需要撤销的数据有异常`);
       return;
@@ -190,6 +196,7 @@ export default class sbBoard {
     }
     this.historyRecordHandler.onward()
     const _data = this.historyRecordHandler.getHistoryArrayFirst()
+    console.log(_data)
     if (!_data) {
       console.error(`需要前进的数据有异常`);
       return;
@@ -573,8 +580,9 @@ export default class sbBoard {
       this.pencilPressing = true;
       this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
       if (this.selectedDraw) {
-        this.selectedDraw['lock'] = true;
+        this.selectedDraw['changed'] = false;
       }
+      // this.setDrawsData(this.getAllDraws().filter(val=>val.label), false)
     } else if (e.button === 2) {
       document.documentElement.style.cursor = 'grabbing'
       this.pencilPressing = true;
@@ -612,11 +620,7 @@ export default class sbBoard {
           }
         }
       } else {
-        // console.log(this.selectedDraw)
-        if (this.selectedDraw && !this.selectedDraw.lock) {
-          this.selectedDraw = null;
-        }
-        
+        this.selectedDraw = null;
       }
     } else {
       if (!this.pencilPressing) {
@@ -638,7 +642,6 @@ export default class sbBoard {
           }
         }
       } else {
-        this.shouldRecord = true;
         this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle)
       }
     }
@@ -660,6 +663,7 @@ export default class sbBoard {
     }
     
     if (this.selectedDraw) {
+      this.validateRect()
       this.detectDrawsIsOverSize()
       if (this.selectedDraw.changed && this.options.recordWithLabel && this.selectedDraw.data.label) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
@@ -676,7 +680,7 @@ export default class sbBoard {
       }
       someOneRect['width'] = Math.abs(someOneRect.width)
       someOneRect['height'] = Math.abs(someOneRect.height)
-      
+
       this.tmpRect = null;
       const _minSize = 5/this.zoomSize;
       if (someOneRect.width > _minSize && someOneRect.height > _minSize)  {
@@ -689,9 +693,8 @@ export default class sbBoard {
           index: (this.originDraws.length-1)
         })
         // 是否需要记录操作
-        if (this.shouldRecord && this.options.recordWithLabel && this.selectedDraw.data.label) {
+        if (this.selectedDraw.data.label) {
           this.historyRecordHandler.recordChange(this.getAllDraws())
-          this.shouldRecord = false;
         }
       }
     }
@@ -699,6 +702,44 @@ export default class sbBoard {
 
     this.pencilPressing = false;
     this.pencilPosition = null;
+  }
+  // 修正翻转调整后的坐标错误偏差
+  validateRect() {
+    if (this.selectedDraw.constructor === Object) {
+      let _item = this.originDraws[this.selectedDraw.index];
+      if (this.tinkerUp) {
+        switch(this.tinkerUp.code) {
+          case "tm":
+          case "bm":
+            if (_item.height < 0) {
+              // [a, b] = [b, a]; // es6 对调两个值
+              _item.y = _item.y + _item.height
+              _item.height = Math.abs(_item.height)
+            }
+            break;
+          case "lm":
+          case "rm":
+            if (_item.width < 0) {
+              _item.x = _item.x + _item.width
+              _item.width = Math.abs(_item.width)
+            }
+            break;
+          case "tr":
+          case "bl":
+          case "tl":
+          case "br":
+            if (_item.width < 0) {
+              _item.x = _item.x + _item.width
+              _item.width = Math.abs(_item.width)
+            }
+            if (_item.height < 0) {
+              _item.y = _item.y + _item.height
+              _item.height = Math.abs(_item.height)
+            }
+            break;
+        }
+      }
+    }
   }
   // 指针状态事件
   pointerDownFn(e){
@@ -844,42 +885,43 @@ export default class sbBoard {
     }
     if (this.pencilPressing ) {
       if (this.selectedDraw) {
-        if (this.selectedDraw.constructor === Object) {
-          let _item = this.originDraws[this.selectedDraw.index];
-          // 修正翻转调整后的坐标错误偏差
-          if (this.tinkerUp) {
-            switch(this.tinkerUp.code) {
-              case "tm":
-              case "bm":
-                if (_item.height < 0) {
-                  // [a, b] = [b, a]; // es6 对调两个值
-                  _item.y = _item.y + _item.height
-                  _item.height = Math.abs(_item.height)
-                }
-                break;
-              case "lm":
-              case "rm":
-                if (_item.width < 0) {
-                  _item.x = _item.x + _item.width
-                  _item.width = Math.abs(_item.width)
-                }
-                break;
-              case "tr":
-              case "bl":
-              case "tl":
-              case "br":
-                if (_item.width < 0) {
-                  _item.x = _item.x + _item.width
-                  _item.width = Math.abs(_item.width)
-                }
-                if (_item.height < 0) {
-                  _item.y = _item.y + _item.height
-                  _item.height = Math.abs(_item.height)
-                }
-                break;
-            }
-          }
-        }
+        // if (this.selectedDraw.constructor === Object) {
+        //   let _item = this.originDraws[this.selectedDraw.index];
+        //   // 修正翻转调整后的坐标错误偏差
+        //   if (this.tinkerUp) {
+        //     switch(this.tinkerUp.code) {
+        //       case "tm":
+        //       case "bm":
+        //         if (_item.height < 0) {
+        //           // [a, b] = [b, a]; // es6 对调两个值
+        //           _item.y = _item.y + _item.height
+        //           _item.height = Math.abs(_item.height)
+        //         }
+        //         break;
+        //       case "lm":
+        //       case "rm":
+        //         if (_item.width < 0) {
+        //           _item.x = _item.x + _item.width
+        //           _item.width = Math.abs(_item.width)
+        //         }
+        //         break;
+        //       case "tr":
+        //       case "bl":
+        //       case "tl":
+        //       case "br":
+        //         if (_item.width < 0) {
+        //           _item.x = _item.x + _item.width
+        //           _item.width = Math.abs(_item.width)
+        //         }
+        //         if (_item.height < 0) {
+        //           _item.y = _item.y + _item.height
+        //           _item.height = Math.abs(_item.height)
+        //         }
+        //         break;
+        //     }
+        //   }
+        // }
+        this.validateRect()
         this.detectDrawsIsOverSize()
         // 记录操作
         if (this.shouldRecord) {
@@ -972,9 +1014,11 @@ export default class sbBoard {
         data: this.originDraws[this.originDraws.length-1],
         index: (this.originDraws.length-1)
       })
-      if (this.shouldRecord && this.options.recordWithLabel && this.selectedDraw.data.label) {
+      if (this.options.recordWithLabel && this.selectedDraw.data.label) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
-        this.shouldRecord = false;
+      }
+      if (!this.options.recordWithLabel) {
+        this.historyRecordHandler.recordChange(this.getAllDraws())
       }
     }
     this.setDrawType('pointer', false)
@@ -1285,11 +1329,11 @@ export default class sbBoard {
     }
   }
   // 设置draws数据(外部接口)
-  setDrawsData(data, init=true) {
+  setDrawsData(data, record=true) {
     this.selectedDraw = null;
     this.originDraws = data;
-    if (this.options.recordHistory && init) {
-      this.initActionHistory(this.options.drawHistory)
+    if (record) {
+      this.historyRecordHandler.recordChange(this.getAllDraws())
     }
   }
   // 绘制标签
@@ -1321,12 +1365,13 @@ export default class sbBoard {
         this.sbCtx.fillStyle = "#fff"
         this.sbCtx.fillText(rect.label, _fx, _y);
       }
-      return {
-        x:_x, 
+      const _coordinate = {
+        x: _x, 
         y: rect.y, 
         width: _width, 
         height: _height
       }
+      return _coordinate
     } else {
       return null;
     }

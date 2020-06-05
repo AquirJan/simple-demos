@@ -18,15 +18,12 @@ export default class recordActionHistory {
       this.revokedStep = this.historyActionArray.length-1
       return null;
     }
-    if (this.revokedStep > this.historyActionArray.length) {
-      this.revokedStep = this.historyActionArray.length;
-      return this.showoffHistoryArray
-    }
     this.showoffHistoryArray.shift()
     return this.showoffHistoryArray
   }
   // 前进
   onward() {
+    
     this.revokedStep = this.revokedStep - 1;
     if (this.revokedStep < 0){
       this.revokedStep = 0
