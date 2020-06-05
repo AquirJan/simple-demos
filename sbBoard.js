@@ -691,6 +691,7 @@ export default class sbBoard {
       this.validateRect()
       this.detectDrawsIsOverSize()
       if (this.selectedDraw.changed && this.historyRecordHandler) {
+        console.log(11)
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
       if (!this.selectedDraw.changed) {
@@ -722,9 +723,9 @@ export default class sbBoard {
           newadd: true
         })
         // 是否需要记录操作
-        // if (this.selectedDraw.data.label && this.historyRecordHandler) {
-        //   this.historyRecordHandler.recordChange(this.getAllDraws())
-        // }
+        if (this.selectedDraw.data.label && this.historyRecordHandler) {
+          this.historyRecordHandler.recordChange(this.getAllDraws())
+        }
       }
     }
 
