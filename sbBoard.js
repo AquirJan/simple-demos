@@ -2099,11 +2099,9 @@ export default class sbBoard {
         this.originDraws.forEach(val => {
           switch (val.type) {
             case "eraser":
-              _canvasCtx.globalCompositeOperation = "destination-out";
-              _canvasCtx.strokeStyle = '#fff'
+              _canvasCtx.strokeStyle = '#000'
               _canvasCtx.lineWidth = val.lineWidth;
               _canvasCtx.stroke(val.path)
-              _canvasCtx.globalCompositeOperation = "source-over";
               break;
             case "brush":
               _canvasCtx.lineWidth = val.lineWidth
