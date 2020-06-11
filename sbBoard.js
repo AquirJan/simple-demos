@@ -13,12 +13,13 @@ export default class sbBoard {
       recordWithLabel: true,
       pencilStyle: {
         strokeStyle: '#333',
+        fillStyle: 'red',
         lineWidth: 2,
         brushSize: 50,
-        brushColor: 'blue',
+        brushColor: 'rgba(0, 195, 255, 0.5)',
+        eraserSize: 50,
       },
       fontFamily: "PingFang SC, Microsoft YaHei, Helvetica, Helvetica Neue, Hiragino Sans GB, Arial, sans-serif",
-      eraserSize: 10
     }, options);
     this.sbCtx = null;
     this.sbDom = null;
@@ -37,7 +38,8 @@ export default class sbBoard {
     this.isObserver = false; // 是否观察者模式
     this.tmpRect = null;
     this.bgObj = null;
-    this.existBrushObj = null;
+    this.existBrushObj = null; // 已有笔刷图
+    this.existAlogrithmObj = null; // 已有算法特定图
     this.pencilPosition = null;
     this.btnScaleStep = 0.4;
     this.drawType = 'pointer'; // rect, polygon, brush, eraser, tycrect
@@ -263,14 +265,22 @@ export default class sbBoard {
       this.zoomSize = 1;
     }
   }
-  // 设置背景图
-  async setExistBrush(obj) {
+  // 设置已有笔刷图
+  async setExistBrushPic(obj) {
     const _obj = Object.assign({
-      color: '#878',
       src: ''
     }, obj)
     if (_obj.src) {
       this.existBrushObj = await this.asyncLoadImage(_obj.src)
+    }
+  }
+  // 设置已有算法特定图
+  async setExistAlgorithmPic(obj) {
+    const _obj = Object.assign({
+      src: ''
+    }, obj)
+    if (_obj.src) {
+      this.existAlogrithmObj = await this.asyncLoadImage(_obj.src)
     }
   }
   // 找出4个极点
@@ -531,6 +541,10 @@ export default class sbBoard {
       return false;
     }
     if (this[`${this.drawType}DownFn`]) {
+      for(let key in options) {
+        this.options.pencilStyle[key] = options[key]
+      }
+
       this.pencilDownFn = (e)=>this[`${this.drawType}DownFn`](e, options)
       this.sbDom.addEventListener('mousedown', this.pencilDownFn, false)
       this.pencilMoveFn = (e)=>this[`${this.drawType}MoveFn`](e, options)
@@ -797,7 +811,7 @@ export default class sbBoard {
           }
         }
       } else {
-        if (this.spaceBar && !this.draging && this.zoomSize !== this.bgObj.scaled) {
+        if (this.spaceBar && !this.draging) {
           this.pencilPressing = true;
           this.draging = true;
           this.dragDownPoint = {
@@ -832,7 +846,6 @@ export default class sbBoard {
       
       if (!this.isObserver) {
         this.findOutFoucusDraw(e)
-
         if (this.pencilPressing) {
           return;
         }
@@ -843,7 +856,6 @@ export default class sbBoard {
   }
   pointerMoveFn(e){
     this.hoverDraw = null;
-    
     if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
@@ -923,42 +935,6 @@ export default class sbBoard {
     }
     if (this.pencilPressing ) {
       if (this.selectedDraw) {
-        // if (this.selectedDraw.constructor === Object) {
-        //   let _item = this.originDraws[this.selectedDraw.index];
-        //   // 修正翻转调整后的坐标错误偏差
-        //   if (this.tinkerUp) {
-        //     switch(this.tinkerUp.code) {
-        //       case "tm":
-        //       case "bm":
-        //         if (_item.height < 0) {
-        //           // [a, b] = [b, a]; // es6 对调两个值
-        //           _item.y = _item.y + _item.height
-        //           _item.height = Math.abs(_item.height)
-        //         }
-        //         break;
-        //       case "lm":
-        //       case "rm":
-        //         if (_item.width < 0) {
-        //           _item.x = _item.x + _item.width
-        //           _item.width = Math.abs(_item.width)
-        //         }
-        //         break;
-        //       case "tr":
-        //       case "bl":
-        //       case "tl":
-        //       case "br":
-        //         if (_item.width < 0) {
-        //           _item.x = _item.x + _item.width
-        //           _item.width = Math.abs(_item.width)
-        //         }
-        //         if (_item.height < 0) {
-        //           _item.y = _item.y + _item.height
-        //           _item.height = Math.abs(_item.height)
-        //         }
-        //         break;
-        //     }
-        //   }
-        // }
         this.validateRect()
         this.detectDrawsIsOverSize()
         // 记录操作
@@ -1062,6 +1038,45 @@ export default class sbBoard {
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
   }
+  // 多边形填充事件
+  polygonfillDownFn(e) {
+    if (e.button === 0) {
+      this.hoverPoint = {
+        x: e.offsetX,
+        y: e.offsetY
+      }
+      this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+    }
+  }
+  polygonfillMoveFn(e) {
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY,
+    }
+    this.drawPolygon(false, true)
+  }
+  polygonfillUpFn(e, options) {
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY,
+    }
+    if (this.detectIsDBClick(e.timeStamp)) {
+      this.setDrawType('pointer', false)
+      this.tmpPolygon['id'] = this.uuidv4Short()
+      this.tmpPolygon['closed'] = true;
+      this.tmpPolygon['fillStyle'] = this.options.pencilStyle.fillStyle
+      this.pencilPosition = null;
+      this.detectDrawsIsOverSize()
+      this.originDraws.push(this.tmpPolygon)
+      this.tmpPolygon = null;
+      this.selectedDraw = cloneDeep({
+        data: this.originDraws[this.originDraws.length-1],
+        index: (this.originDraws.length-1)
+      })
+    } else {
+      this.drawPolygon()
+    }
+  }
   // 多边形事件
   polygonDownFn(e) {
     if (e.button === 0) {
@@ -1109,17 +1124,22 @@ export default class sbBoard {
       }
       this.pencilPressing = true;
       this.tmpPath2d = new Path2D()
-      this.tmpPath2d.moveTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+      let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
+      let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
+      this.tmpPath2d.moveTo(_x, _y)
     }
   }
   brushMoveFn(e){
+    document.documentElement.style.cursor = 'crosshair'
     if (this.pencilPressing) {
       this.hoverPoint = {
         x: e.offsetX,
         y: e.offsetY,
       }
       if (this.tmpPath2d) {
-        this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+        let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
+        let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
+        this.tmpPath2d.lineTo(_x, _y)
       }
     }
   }
@@ -1130,10 +1150,20 @@ export default class sbBoard {
         y: e.offsetY,
       }
       if (this.tmpPath2d) {
-        this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+        let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
+        let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
+        // if (this.bgObj) {
+        //   _x = _x < this.bgObj.offsetX ? this.bgObj.offsetX : _x;
+        //   _y = _y < this.bgObj.offsetY ? this.bgObj.offsetY : _y;
+        //   _x = _x > (this.bgObj.offsetX+this.bgObj.width) ? this.bgObj.offsetX+this.bgObj.width : _x;
+        //   _y = _x > (this.bgObj.offsetY+this.bgObj.height) ? (this.bgObj.offsetY+this.bgObj.height) : _y;
+        // }
+        this.tmpPath2d.lineTo(_x, _y)
         this.originDraws.push({
           type: 'brush',
-          path: this.tmpPath2d
+          path: this.tmpPath2d,
+          lineWidth: this.options.pencilStyle.brushSize,
+          strokeStyle: this.options.pencilStyle.brushColor
         })
         this.tmpPath2d = null;
       }
@@ -1154,6 +1184,7 @@ export default class sbBoard {
     }
   }
   eraserMoveFn(e){
+    document.documentElement.style.cursor = 'crosshair'
     if (this.pencilPressing){
       this.hoverPoint = {
         x: e.offsetX,
@@ -1169,7 +1200,8 @@ export default class sbBoard {
       if (this.tmpPath2d) {
         this.originDraws.push({
           type: 'eraser',
-          path: this.tmpPath2d
+          path: this.tmpPath2d,
+          lineWidth: this.options.pencilStyle.eraserSize
         })
         this.tmpPath2d = null;
       }
@@ -1455,34 +1487,99 @@ export default class sbBoard {
     this.selectedDraw = null;
     this.hiddenDraws = params;
   }
+  renderSingleOriginDraws(val) {
+    switch (val.type) {
+      case 'rect':
+        this.sbCtx.globalCompositeOperation = 'source-over';
+        if (this.hiddenDraws) {
+          if(!val.label) {
+            this.initPencilStyle(val.strokeStyle, val.lineWidth)
+            this.sbCtx.strokeRect(
+              val.x,
+              val.y,
+              val.width,
+              val.height
+            );
+          }
+        } else {
+          this.initPencilStyle(val.strokeStyle, val.lineWidth)
+          this.sbCtx.strokeRect(
+            val.x,
+            val.y,
+            val.width,
+            val.height
+          );
+          if (val.label){
+            this.labelRect(val, this.zoomSize, this.isObserver);
+          }
+        }
+        
+        break;
+      case "polygon":
+        this.sbCtx.globalCompositeOperation = 'source-over';
+        if (val.label){
+          this.labelRect(val, this.zoomSize, this.isObserver);
+        }
+        this.sbCtx.beginPath();
+        this.sbCtx.moveTo(val.x, val.y)
+        val.ways.forEach(wval => {
+          this.sbCtx.lineTo(wval.x, wval.y)
+        })
+        this.sbCtx.closePath();
+        if (val.fillStyle) {
+          this.initPencilStyle(val.fillStyle, val.lineWidth, val.fillStyle)
+          this.sbCtx.fill()
+        } else {
+          this.initPencilStyle(val.strokeStyle, val.lineWidth)
+          this.sbCtx.stroke()
+        }
+        break;
+      case "eraser":
+        this.sbCtx.globalCompositeOperation = "destination-out";
+        this.sbCtx.strokeStyle = '#fff'
+        this.sbCtx.lineWidth = val.lineWidth;
+        this.sbCtx.stroke(val.path)
+        this.sbCtx.globalCompositeOperation = "source-over";
+        break;
+      case "brush":
+        this.sbCtx.lineWidth = val.lineWidth;
+        this.sbCtx.strokeStyle = val.strokeStyle;
+        this.sbCtx.stroke(val.path)
+        break;
+    }
+  }
   // 绘制画面
   renderBoard() {
     this.clearWhole(false)
     this.sbCtx.setTransform(1, 0, 0, 1, 0, 0)
     this.sbCtx.scale(this.zoomSize, this.zoomSize)
     this.sbCtx.translate(this.dragOffset.x/this.zoomSize, this.dragOffset.y/this.zoomSize)
-    
+
+    // 默认状态
     this.sbCtx.globalCompositeOperation = "source-over";
+    // 设置背景图
+    // if (this.bgObj) {
+    //   // this.sbCtx.drawImage(this.bgObj.data, 0, 0)
+    //   this.sbCtx.fillStyle = '#fff'
+    //   this.sbCtx.beginPath();
+    //   this.sbCtx.rect(0, 0, this.bgObj.width, this.bgObj.height)
+    //   this.sbCtx.fill()
+    //   this.sbCtx.closePath();
+    // }
+    // 添加已有brush
     if (this.existBrushObj) {
       this.sbCtx.drawImage(this.existBrushObj.data, 0, 0)
     }
-    
-    this.originDraws.forEach(val => {
-      switch (val.type) {
-        case "eraser":
-          this.sbCtx.globalCompositeOperation = "destination-out";
-          this.sbCtx.strokeStyle = '#fff'
-          this.sbCtx.lineWidth = this.options.pencilStyle.brushSize;
-          this.sbCtx.stroke(val.path)
-          this.sbCtx.globalCompositeOperation = "source-over";
-          break;
-        case "brush":
-          this.sbCtx.lineWidth = this.options.pencilStyle.brushSize;
-          this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
-          this.sbCtx.stroke(val.path)
-          break;
-      }
-    });
+
+    // 已有draws
+    if (this.isObserver && this.hoverDraw) {
+      const _draw = this.hoverDraw.data
+      this.renderSingleOriginDraws(_draw)
+    } else {
+      this.originDraws.forEach(val => {
+        this.renderSingleOriginDraws(val)
+      })
+    }
     
     // 临时笔刷
     if (this.tmpPath2d) {
@@ -1491,90 +1588,13 @@ export default class sbBoard {
         this.sbCtx.lineWidth =  this.options.pencilStyle.brushSize;
         this.sbCtx.strokeStyle = '#fff'
         this.sbCtx.stroke(this.tmpPath2d)
-        this.sbCtx.globalCompositeOperation = 'source-over';
+        // this.sbCtx.globalCompositeOperation = 'source-over';
       }
       if (this.drawType === 'brush') {
         this.sbCtx.lineWidth =  this.options.pencilStyle.brushSize;
         this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
         this.sbCtx.stroke(this.tmpPath2d)
       }
-    }
-
-    if (this.isObserver && this.hoverDraw) {
-        const _draw = this.hoverDraw.data
-        switch (_draw.type) {
-          case 'rect':
-            this.initPencilStyle(_draw.strokeStyle, _draw.lineWidth)
-            this.sbCtx.strokeRect(
-              _draw.x,
-              _draw.y,
-              _draw.width,
-              _draw.height
-            );
-            if (_draw.label){
-              this.labelOutsideDraw(_draw, this.zoomSize, this.isObserver)
-            }
-            break;
-          case "polygon":
-            this.sbCtx.strokeStyle = 'red'
-            if (_draw.label){
-              this.labelOutsideDraw(_draw, this.zoomSize, this.isObserver)
-            }
-            this.sbCtx.beginPath();
-            this.sbCtx.moveTo(_draw.x, _draw.y)
-            _draw.ways.forEach(wval => {
-              this.sbCtx.lineTo(wval.x, wval.y)
-            })
-            this.sbCtx.closePath();
-            this.initPencilStyle(_draw.strokeStyle, _draw.lineWidth)
-            this.sbCtx.stroke()
-            
-            break;
-        }
-    } else {
-      this.originDraws.forEach(val => {
-        switch (val.type) {
-          case 'rect':
-            if (this.hiddenDraws) {
-              if(!val.label) {
-                this.initPencilStyle(val.strokeStyle, val.lineWidth)
-                this.sbCtx.strokeRect(
-                  val.x,
-                  val.y,
-                  val.width,
-                  val.height
-                );
-              }
-            } else {
-              this.initPencilStyle(val.strokeStyle, val.lineWidth)
-              this.sbCtx.strokeRect(
-                val.x,
-                val.y,
-                val.width,
-                val.height
-              );
-              if (val.label){
-                this.labelRect(val, this.zoomSize, this.isObserver);
-              }
-            }
-            
-            break;
-          case "polygon":
-            this.sbCtx.strokeStyle = 'red'
-            if (val.label){
-              this.labelRect(val, this.zoomSize, this.isObserver);
-            }
-            this.sbCtx.beginPath();
-            this.sbCtx.moveTo(val.x, val.y)
-            val.ways.forEach(wval => {
-              this.sbCtx.lineTo(wval.x, wval.y)
-            })
-            this.sbCtx.closePath();
-            this.initPencilStyle(val.strokeStyle, val.lineWidth)
-            this.sbCtx.stroke()
-            break;
-        }
-      })
     }
     
     // 临时矩形
@@ -1697,14 +1717,14 @@ export default class sbBoard {
   // 监听键盘按键释放
   sbDomKeyup(e) {
     const keycode = e.keyCode;
-    // if (keycode === 32){
-    //   // 空格
-    //   this.spaceBar = false;
-    //   document.documentElement.style.cursor = 'default'
-    //   e.preventDefault()
-    //   e.stopPropagation()
-    //   return;
-    // }
+    if (keycode === 32){
+      // 空格
+      this.spaceBar = false;
+      document.documentElement.style.cursor = 'default'
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
     if ( keycode === 18 ) {
       // alt
       this.altKey = false;
@@ -1776,17 +1796,17 @@ export default class sbBoard {
       }
       return;
     }
-    // if (keycode === 32 && this.zoomSize !== this.bgObj.scaled){
-    //   // 空格
-    //   this.spaceBar = true;
-    //   document.documentElement.style.cursor = 'grabbing'
-    //   if (this.drawType!=='pointer'){
-    //     this.setDrawType('pointer')
-    //   }
-    //   e.preventDefault()
-    //   e.stopPropagation()
-    //   return;
-    // }
+    if (keycode === 32){
+      // 空格
+      this.spaceBar = true;
+      document.documentElement.style.cursor = 'grabbing'
+      if (this.drawType!=='pointer'){
+        this.setDrawType('pointer')
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      return;
+    }
     if (this.selectedDraw) {
       const _stepDelta = e.shiftKey ? 10 : 1;
       const _step = this.normalFloat(_stepDelta/this.zoomSize)
@@ -2046,7 +2066,7 @@ export default class sbBoard {
   exportPic(options) {
     this.setDrawType('pointer')
     const _options = Object.assign({}, {
-      type: 'origin', // draws, fusion, brush
+      type: 'origin', // draws, fusion, brush, algorithm
       quality:1,
       // width: this.sbDom.width, 
       // height: this.sbDom.height, 
@@ -2064,28 +2084,65 @@ export default class sbBoard {
       _canvas.width = _width
       _canvas.height = _height
       const _canvasCtx = _canvas.getContext('2d')
-      if (this.existBrushObj) {
-        _canvasCtx.drawImage(this.existBrushObj.data, 0, 0)
-      }
-      if (_options.type === 'draws' || _options.type === 'fusion' || _options.type === 'brush') {
+      if (_options.type === 'algorithm') {
         
+        if (this.bgObj) {
+          _canvasCtx.fillStyle = '#000'
+          _canvasCtx.beginPath()
+          _canvasCtx.rect(0, 0, this.bgObj.width, this.bgObj.height)
+          _canvasCtx.fill()
+          _canvasCtx.closePath()
+        }
+        if (this.existAlogrithmObj) {
+          _canvasCtx.drawImage(this.existAlogrithmObj.data, 0, 0)
+        }
         this.originDraws.forEach(val => {
           switch (val.type) {
             case "eraser":
               _canvasCtx.globalCompositeOperation = "destination-out";
               _canvasCtx.strokeStyle = '#fff'
-              _canvasCtx.lineWidth = this.options.pencilStyle.brushSize;
+              _canvasCtx.lineWidth = val.lineWidth;
               _canvasCtx.stroke(val.path)
               _canvasCtx.globalCompositeOperation = "source-over";
               break;
             case "brush":
-              _canvasCtx.lineWidth = this.options.pencilStyle.brushSize;
-              _canvasCtx.strokeStyle = this.options.pencilStyle.brushColor
+              _canvasCtx.lineWidth = val.lineWidth
+              _canvasCtx.strokeStyle = '#fff'
               _canvasCtx.stroke(val.path)
               break;
           }
         });
-        if (_options.type === 'draws' || _options.type === 'fusion') {
+        
+        const _img = _canvas.toDataURL('image/png', _options.quality)
+      
+        if (_img) {
+          if (_options.file) {
+            return resolve(this.blobToFile(this.b64toBlob(_img), `exportPicture_algorithm.png`, _options.file.options))
+          }
+          return resolve(_img)
+        }
+      }
+      if (this.existBrushObj) {
+        _canvasCtx.drawImage(this.existBrushObj.data, 0, 0)
+      }
+      if (_options.type === 'draws' || _options.type === 'fusion' || _options.type === 'brush') {
+        this.originDraws.forEach(val => {
+          switch (val.type) {
+            case "eraser":
+              _canvasCtx.globalCompositeOperation = "destination-out";
+              _canvasCtx.strokeStyle = '#fff'
+              _canvasCtx.lineWidth = val.lineWidth;
+              _canvasCtx.stroke(val.path)
+              _canvasCtx.globalCompositeOperation = "source-over";
+              break;
+            case "brush":
+              _canvasCtx.lineWidth = val.lineWidth
+              _canvasCtx.strokeStyle = val.strokeStyle
+              _canvasCtx.stroke(val.path)
+              break;
+          }
+        });
+        if (_options.type === 'draws' || _options.type === 'fusion' ) {
           this.originDraws.forEach(val => {
             switch (val.type) {
               case 'rect':
@@ -2108,8 +2165,8 @@ export default class sbBoard {
                   _canvasCtx.lineTo(wval.x, wval.y)
                 })
                 _canvasCtx.closePath();
-                _canvasCtx.strokeStyle = this.options.pencilStyle.strokeStyle
-                _canvasCtx.lineWidth = this.options.pencilStyle.lineWidth
+                _canvasCtx.strokeStyle = val.strokeStyle
+                _canvasCtx.lineWidth = val.lineWidth
                 _canvasCtx.stroke()
                 break;
             }

@@ -85,6 +85,18 @@
       background: rgb(160, 146, 92);
       grid-area: workbench;
     }
+    .preview{
+      background-color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      z-index: 1;
+    }
   </style>
 </head>
 <body>
@@ -100,9 +112,9 @@
         <button id="pointer">pointer</button>
       </li>
       <!-- 手掌 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="handmove">handmove</button>
-      </li>
+      </li> -->
       <!-- 导出图片 -->
       <li class="tools-list-item">
         <button id="exportImage">exportImage</button>
@@ -112,9 +124,9 @@
         <button id="getData">getData</button>
       </li>
       <!-- 小图 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="pcbSmall">pcbSmall</button>
-      </li>
+      </li> -->
       <!-- 前进 -->
       <li class="tools-list-item">
         <button id="onward">onward</button>
@@ -128,9 +140,9 @@
         <button id="circle">circle</button>
       </li> -->
       <!-- 观察者模式 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="observer">observer</button>
-      </li>
+      </li> -->
       <!-- 笔刷 -->
       <li class="tools-list-item">
         <button id="brush">brush</button>
@@ -144,9 +156,9 @@
         <button id="polygon">polygon</button>
       </li>
       <!-- 矩形 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="rect">rect</button>
-      </li>
+      </li> -->
       <!-- tyc矩形 -->
       <li class="tools-list-item">
         <button id="tycrect">tycrect</button>
@@ -160,13 +172,13 @@
         <button id="clear">clear</button>
       </li> -->
       <!-- 缩小 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="zoomOut">zoomOut</button>
-      </li>
+      </li> -->
       <!-- 放大 -->
-      <li class="tools-list-item">
+      <!-- <li class="tools-list-item">
         <button id="zoomIn">zoomIn</button>
-      </li>
+      </li> -->
       <!-- 还原缩放 -->
       <li class="tools-list-item">
         <button id="zoomReset">zoomReset</button>
@@ -182,9 +194,11 @@
     
     function bindEvent(btnId, cb) {
       const restoreBtn = document.getElementById(btnId)
-      restoreBtn.addEventListener('click', (e)=>{
-        cb()
-      })
+      if (restoreBtn) {
+        restoreBtn.addEventListener('click', (e)=>{
+          cb()
+        })
+      }
     }
     function generatePop(x, y){
       const pop = document.createElement('div')
@@ -205,17 +219,18 @@
       //   brushColor: 'green'
       // },
       recordWithLabel: false,
-      drawHistory: initData,
+      // drawHistory: initData,
       wrap:workbenchDom
       // width: document.body.clientWidth,
       // height: document.body.clientHeight
     })
 
     
-    // sbBoardIns.setDrawType('polygon')
+    sbBoardIns.setDrawType('brush')
     // sbBoardIns.setDrawsData([{"x":2257,"y":1857,"ways":[{"x":2245,"y":1262},{"x":2536,"y":1274},{"x":2346,"y":1835}],"type":"polygon","closed":true,"id":"2de0-422e9f"},{"x":2819,"y":1224,"ways":[{"x":2819,"y":1224},{"x":3177,"y":1266},{"x":3046,"y":1532},{"x":2751,"y":1384}],"type":"polygon","closed":true,"id":"cc83-402782"},{"x":2278,"y":2781,"ways":[{"x":2278,"y":2781},{"x":2806,"y":2629},{"x":2388,"y":2165}],"type":"polygon","closed":true,"id":"bc23-4224a4"},{"x":1793,"y":1515,"ways":[{"x":1835,"y":1726},{"x":1996,"y":1713},{"x":2118,"y":1591},{"x":2084,"y":1430},{"x":1810,"y":1430}],"type":"polygon","closed":true,"id":"6dc5-4779bc"},{"x":3376,"y":2262,"ways":[{"x":3527,"y":2291},{"x":3456,"y":2397},{"x":3350,"y":2308}],"type":"polygon","closed":true,"id":"2649-4415b2"}])
     sbBoardIns.setBackground({src:'./pcb_demo.jpg'})
-    // sbBoardIns.setExistBrush({src:'./pcb_brush.png'})
+    sbBoardIns.setExistBrushPic({src:'./pcb_brush.png'})
+    sbBoardIns.setExistAlgorithmPic({src:'./pcb_algorithm.png'})
     // sbBoardIns.setObserverMode(true);
     workbenchDom.appendChild(sbBoardIns.getWrapDom())
     // document.body.appendChild(sbBoardIns.getWrapDom())
@@ -303,11 +318,11 @@
     })
     bindEvent('polygon', ()=>{
       console.log('polygon')
-      sbBoardIns.setDrawType('polygon')
+      sbBoardIns.setDrawType('polygonfill', true)
     })
     bindEvent('brush', ()=>{
       console.log('brush')
-      sbBoardIns.setDrawType('brush')
+      sbBoardIns.setDrawType('brush', true)
     })
     // bindEvent('circle', ()=>{
     //   console.log('circle')
@@ -349,18 +364,33 @@
       
       // // img.src=sbBoardIns.exportDrawsPic()
       setTimeout(async ()=>{
-        const b64 = await sbBoardIns.exportPic({type: 'fusion', file:false})
-        // console.log(b64)
-        // const downLink = document.createElement('a')
-        const img = new Image()
-        document.body.appendChild(img)
-        img.src=b64
-        img.style.cssText="display:block;width:100%"
-        document.body.style.position = 'relative'
+        const b64 = await sbBoardIns.exportPic({type: 'algorithm', file:false})
+        const brush_b64 = await sbBoardIns.exportPic({type: 'brush', file:false})
+        if (b64 && brush_b64) {
+          previewExportImg([b64, brush_b64])
+        }
+        
         mask.remove()
       }, 100)
     })
-    
+    function previewExportImg(b64Array) {
+      return new Promise(resolve => {
+        const previewWrap = document.createElement('div')
+        // previewWrap.style.cssText = 'background-color:#fff;display:flex;align-items:center;jusfity-content:center;position:absolute;top:0;left:0;width:100%;height:100%;'
+        previewWrap.classList.add('preview')
+        b64Array.forEach(val=>{
+          const img = new Image()
+          img.src=val
+          img.style.cssText="display:block;width:50%"
+          previewWrap.appendChild(img)
+          previewWrap.addEventListener('click', ()=>{
+            previewWrap.remove()
+          })
+        })
+        document.body.appendChild(previewWrap)
+        resolve(true)
+      })
+    }
     // const canvas = document.getElementById('canvas')
     // const image = new Image();
     // image.src = './pcb_demo.jpg';
