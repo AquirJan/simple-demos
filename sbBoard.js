@@ -72,6 +72,7 @@ export default class sbBoard {
     this.historyRecordHandler = null;
     this.shouldRecord = false;
     this.isHandMove = false;
+    this.cursorDom = null;
     return this.init()
   }
   // 初始化
@@ -157,6 +158,25 @@ export default class sbBoard {
 
     this.renderBoard()
     return this;
+  }
+  // cursor状态图标设置
+  setCursor(point){
+    const _offsetX = this.sbWrap.offsetLeft
+    const _offsetY = this.sbWrap.offsetTop
+    if (!this.cursorDom) {
+      this.cursorDom = document.createElement('div')
+      this.cursorDom.style.width = '10px'
+      this.cursorDom.style.height = '10px'
+      this.cursorDom.style.position = 'absolute'
+      this.cursorDom.style.border = '1px solid #333'
+      this.cursorDom.style.backgroundColor = '#efefef'
+      document.body.appendChild(this.cursorDom)
+    } else {
+      // this.cursorDom.style.backgroundImage = 'url()'
+    }
+    console.log(_offsetX)
+    this.cursorDom.style.left = point.x+_offsetX+'px'
+    this.cursorDom.style.top = point.y+_offsetY+'px'
   }
   // 历史记录初始化
   initActionHistory(historys){
@@ -1221,12 +1241,14 @@ export default class sbBoard {
     }
   }
   eraserMoveFn(e){
-    document.documentElement.style.cursor = 'crosshair'
+    // document.documentElement.style.cursor = 'crosshair'
+    
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY
+    }
+    this.setCursor(this.hoverPoint);
     if (this.pencilPressing){
-      this.hoverPoint = {
-        x: e.offsetX,
-        y: e.offsetY
-      }
       if (this.tmpPath2d) {
         this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       }
