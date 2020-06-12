@@ -96,6 +96,7 @@
       width:100%;
       height:100%;
       z-index: 1;
+      flex-wrap: wrap;
     }
   </style>
 </head>
@@ -234,12 +235,6 @@
     // sbBoardIns.setObserverMode(true);
     workbenchDom.appendChild(sbBoardIns.getWrapDom())
     // document.body.appendChild(sbBoardIns.getWrapDom())
-    sbBoardIns.getCanvasDom().addEventListener('mouseup', (e)=>{
-      // settimeout作用等待插件自己身数据处理
-      setTimeout(()=>{
-         
-      })
-    })
     
     // let scaled = false;
     // const scaleBtn = document.getElementById('scale')
@@ -318,7 +313,10 @@
     })
     bindEvent('polygon', ()=>{
       console.log('polygon')
-      sbBoardIns.setDrawType('polygonfill', true)
+      sbBoardIns.setDrawType('polygonfill', true, {
+        strokeStyle: 'rgba(0, 195, 255, 0.5)',
+        fillStyle: 'rgba(0, 195, 255, 0.5)'
+      })
     })
     bindEvent('brush', ()=>{
       console.log('brush')
@@ -360,23 +358,20 @@
     bindEvent('exportImage', ()=>{
       const mask = loadingMask()
       document.body.appendChild(mask)
-      console.log('exportImage')
-      
-      // // img.src=sbBoardIns.exportDrawsPic()
       setTimeout(async ()=>{
         const b64 = await sbBoardIns.exportPic({type: 'algorithm', file:false})
-        const brush_b64 = await sbBoardIns.exportPic({type: 'brush', file:false})
-        if (b64 && brush_b64) {
-          previewExportImg([b64, brush_b64])
+        const brush_b64 = await sbBoardIns.exportPic({type: 'draws', file:false})
+        const fusion_b64 = await sbBoardIns.exportPic({type: 'fusion', file:false})
+        const origin_b64 = await sbBoardIns.exportPic({type: 'origin', file:false})
+        if (b64 && brush_b64 && fusion_b64 && origin_b64) {
+          previewExportImg([b64, brush_b64, fusion_b64, origin_b64])
         }
-        
         mask.remove()
       }, 100)
     })
     function previewExportImg(b64Array) {
       return new Promise(resolve => {
         const previewWrap = document.createElement('div')
-        // previewWrap.style.cssText = 'background-color:#fff;display:flex;align-items:center;jusfity-content:center;position:absolute;top:0;left:0;width:100%;height:100%;'
         previewWrap.classList.add('preview')
         b64Array.forEach(val=>{
           const img = new Image()

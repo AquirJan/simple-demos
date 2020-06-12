@@ -1053,6 +1053,12 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
+    if (this.detectTwoPointClose(this.tmpPolygon, {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+      document.documentElement.style.cursor = 'all-scroll'
+    } else {
+      document.documentElement.style.cursor = 'crosshair'
+    }
+    
     this.drawPolygon(false, true)
   }
   polygonfillUpFn(e, options) {
@@ -1060,22 +1066,53 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
-    if (this.detectIsDBClick(e.timeStamp)) {
-      this.setDrawType('pointer', false)
-      this.tmpPolygon['id'] = this.uuidv4Short()
-      this.tmpPolygon['closed'] = true;
-      this.tmpPolygon['fillStyle'] = this.options.pencilStyle.fillStyle
-      this.pencilPosition = null;
-      this.detectDrawsIsOverSize()
-      this.originDraws.push(this.tmpPolygon)
-      this.tmpPolygon = null;
-      this.selectedDraw = cloneDeep({
-        data: this.originDraws[this.originDraws.length-1],
-        index: (this.originDraws.length-1)
-      })
-    } else {
+    if (!this.tmpPolygon) {
       this.drawPolygon()
+    } else {
+      if (this.tmpPolygon.ways.length > 1) {
+        if(this.detectTwoPointClose(this.tmpPolygon, {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+          this.setDrawType('pointer', false)
+          this.tmpPolygon['id'] = this.uuidv4Short()
+          this.tmpPolygon['closed'] = true;
+          this.tmpPolygon['fillStyle'] = this.options.pencilStyle.fillStyle
+          this.pencilPosition = null;
+          this.detectDrawsIsOverSize()
+          this.originDraws.push(this.tmpPolygon)
+          this.tmpPolygon = null;
+          this.selectedDraw = cloneDeep({
+            data: this.originDraws[this.originDraws.length-1],
+            index: (this.originDraws.length-1)
+          })
+        } else {
+          if (!this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+            this.drawPolygon()
+          }
+        }
+        return;
+      }
+      if (!this.tmpPolygon.ways.length || !this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+        this.drawPolygon()
+      }
     }
+    
+    // if (this.detectIsDBClick(e.timeStamp)) {
+    //   console.log('dbclick')
+    //   this.setDrawType('pointer', false)
+    //   this.tmpPolygon['id'] = this.uuidv4Short()
+    //   this.tmpPolygon['closed'] = true;
+    //   this.tmpPolygon['fillStyle'] = this.options.pencilStyle.fillStyle
+    //   this.pencilPosition = null;
+    //   this.detectDrawsIsOverSize()
+    //   this.originDraws.push(this.tmpPolygon)
+    //   this.tmpPolygon = null;
+    //   this.selectedDraw = cloneDeep({
+    //     data: this.originDraws[this.originDraws.length-1],
+    //     index: (this.originDraws.length-1)
+    //   })
+    // } else {
+    //   console.log('single click')
+    //   this.drawPolygon()
+    // }
   }
   // 多边形事件
   polygonDownFn(e) {
@@ -2066,7 +2103,7 @@ export default class sbBoard {
   exportPic(options) {
     this.setDrawType('pointer')
     const _options = Object.assign({}, {
-      type: 'origin', // draws, fusion, brush, algorithm
+      type: 'origin', // draws, fusion, algorithm
       quality:1,
       // width: this.sbDom.width, 
       // height: this.sbDom.height, 
@@ -2108,6 +2145,24 @@ export default class sbBoard {
               _canvasCtx.strokeStyle = '#fff'
               _canvasCtx.stroke(val.path)
               break;
+            case "polygon":
+              _canvasCtx.beginPath();
+              _canvasCtx.moveTo(val.x, val.y)
+              console.log('polygon')
+              console.dir(val)
+              val.ways.forEach(wval => {
+                _canvasCtx.lineTo(wval.x, wval.y)
+              })
+              _canvasCtx.closePath();
+              _canvasCtx.lineWidth = val.lineWidth
+              if (val.fillStyle) {
+                _canvasCtx.fillStyle = '#fff'
+                _canvasCtx.fill()
+              } else {
+                _canvasCtx.strokeStyle = val.strokeStyle
+                _canvasCtx.stroke()
+              }
+              break;
           }
         });
         
@@ -2120,12 +2175,25 @@ export default class sbBoard {
           return resolve(_img)
         }
       }
-      if (this.existBrushObj) {
+      if (this.existBrushObj && _options.type !== 'origin') {
         _canvasCtx.drawImage(this.existBrushObj.data, 0, 0)
       }
-      if (_options.type === 'draws' || _options.type === 'fusion' || _options.type === 'brush') {
+      if (_options.type === 'draws' || _options.type === 'fusion') {
         this.originDraws.forEach(val => {
           switch (val.type) {
+            case 'rect':
+              _canvasCtx.strokeStyle = val.strokeStyle ? val.strokeStyle : this.options.pencilStyle.strokeStyle
+              _canvasCtx.lineWidth = val.lineWidth ? val.lineWidth : this.options.pencilStyle.lineWidth
+              _canvasCtx.strokeRect(
+                val.x,
+                val.y,
+                val.width,
+                val.height
+              );
+              if (val.label){
+                this.labelRect(val, this.zoomSize, this.isObserver, _canvasCtx);
+              }
+              break;
             case "eraser":
               _canvasCtx.globalCompositeOperation = "destination-out";
               _canvasCtx.strokeStyle = '#fff'
@@ -2138,38 +2206,26 @@ export default class sbBoard {
               _canvasCtx.strokeStyle = val.strokeStyle
               _canvasCtx.stroke(val.path)
               break;
+            case "polygon":
+              _canvasCtx.beginPath();
+              _canvasCtx.moveTo(val.x, val.y)
+              console.log('polygon')
+              console.dir(val)
+              val.ways.forEach(wval => {
+                _canvasCtx.lineTo(wval.x, wval.y)
+              })
+              _canvasCtx.closePath();
+              _canvasCtx.lineWidth = val.lineWidth
+              if (val.fillStyle) {
+                _canvasCtx.fillStyle = val.fillStyle
+                _canvasCtx.fill()
+              } else {
+                _canvasCtx.strokeStyle = val.strokeStyle
+                _canvasCtx.stroke()
+              }
+              break;
           }
         });
-        if (_options.type === 'draws' || _options.type === 'fusion' ) {
-          this.originDraws.forEach(val => {
-            switch (val.type) {
-              case 'rect':
-                _canvasCtx.strokeStyle = val.strokeStyle ? val.strokeStyle : this.options.pencilStyle.strokeStyle
-                _canvasCtx.lineWidth = val.lineWidth ? val.lineWidth : this.options.pencilStyle.lineWidth
-                _canvasCtx.strokeRect(
-                  val.x,
-                  val.y,
-                  val.width,
-                  val.height
-                );
-                if (val.label){
-                  this.labelRect(val, this.zoomSize, this.isObserver, _canvasCtx);
-                }
-                break;
-              case "polygon":
-                _canvasCtx.beginPath();
-                _canvasCtx.moveTo(val.x, val.y)
-                val.ways.forEach(wval => {
-                  _canvasCtx.lineTo(wval.x, wval.y)
-                })
-                _canvasCtx.closePath();
-                _canvasCtx.strokeStyle = val.strokeStyle
-                _canvasCtx.lineWidth = val.lineWidth
-                _canvasCtx.stroke()
-                break;
-            }
-          })
-        }
       }
       
       if (_options.type === 'origin' || _options.type === 'fusion') {
@@ -2352,13 +2408,26 @@ export default class sbBoard {
     });
   }
   // 判断两点是否接近 
-  detectTwoPointClose(reference, point) {
+  detectTwoPointClose(reference, point, zoomSize) {
     let flagX = false;
     let flagY = false;
-    if (point.x <= reference.x + 5 && point.x >= reference.x - 5) {
+    
+    if (!point || !reference) {
+      return false;
+    }
+    let _offsetX = this.bgObj ? this.bgObj.offsetX/zoomSize : 0
+    let _offsetY = this.bgObj ? this.bgObj.offsetY/zoomSize : 0
+    const _gapSzie = 5/zoomSize;
+
+    const _maxX = reference.x + _gapSzie + _offsetX
+    const _minX = reference.x - _gapSzie + _offsetX
+    const _maxY = reference.y + _gapSzie + _offsetY
+    const _minY = reference.y - _gapSzie + _offsetY
+    
+    if (_maxX >= point.x && point.x >= _minX) {
       flagX = true;
     }
-    if (point.y <= reference.y + 5 && point.y >= reference.y - 5) {
+    if (_maxY >= point.y && point.y >= _minY) {
       flagY = true;
     }
     if (flagX && flagY) {
