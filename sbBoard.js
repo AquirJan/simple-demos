@@ -73,6 +73,7 @@ export default class sbBoard {
     this.shouldRecord = false;
     this.isHandMove = false;
     this.cursorDom = null;
+    this.specifyDrawId = null;
     return this.init()
   }
   // 初始化
@@ -155,7 +156,6 @@ export default class sbBoard {
         this.setBackground({src:this.bgObj.src})
       }
     })
-
     this.renderBoard()
     return this;
   }
@@ -174,7 +174,6 @@ export default class sbBoard {
     } else {
       // this.cursorDom.style.backgroundImage = 'url()'
     }
-    console.log(_offsetX)
     this.cursorDom.style.left = point.x+_offsetX+'px'
     this.cursorDom.style.top = point.y+_offsetY+'px'
   }
@@ -561,6 +560,10 @@ export default class sbBoard {
       return false;
     }
     if (this[`${this.drawType}DownFn`]) {
+      if (options.id) {
+        this.specifyDrawId = options.id
+      }
+      delete options.id
       for(let key in options) {
         this.options.pencilStyle[key] = options[key]
       }
@@ -582,7 +585,7 @@ export default class sbBoard {
     if (this.selectedDraw) {
       // 判断是否单选情况
       if (this.selectedDraw.constructor === Object) {
-        const _item = cloneDeep(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y))
+        const _item = cloneDeep(this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y))
         if (_item && (this.selectedDraw.index !== _item.index || this.selectedDraw.pointIn !== _item.pointIn)) {
           this.selectedDraw = _item
         } else if(this.selectedDraw.pointIn && _item ===null) {
@@ -602,10 +605,10 @@ export default class sbBoard {
         }
       }
     } else {
-      this.selectedDraw = cloneDeep(this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y))
+      this.selectedDraw = cloneDeep(this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y))
     }
 
-    if (this.selectedDraw && !this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) && !this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) && !this.tinkerUp && !this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)) {
+    if (this.selectedDraw && !this.tinkerUp && !this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y)) {
       this.selectedDraw = null;
       this.modifyRect = null
     }
@@ -725,7 +728,6 @@ export default class sbBoard {
       this.validateRect()
       this.detectDrawsIsOverSize()
       if (this.selectedDraw.changed && this.historyRecordHandler) {
-        console.log(11)
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
       if (!this.selectedDraw.changed) {
@@ -748,7 +750,8 @@ export default class sbBoard {
       const _minSize = 5/this.zoomSize;
       if (someOneRect.width > _minSize && someOneRect.height > _minSize)  {
         // 记录已经画的rects
-        someOneRect['id'] = this.uuidv4Short()
+        someOneRect['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
+        this.specifyDrawId = null;
         this.originDraws.push(someOneRect)
         this.detectDrawsIsOverSize()
         this.selectedDraw = cloneDeep({
@@ -823,6 +826,7 @@ export default class sbBoard {
       if (this.ctrlKey) {
         if (this.selectedDraw && !this.isObserver) {
           let _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+          // let _item = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y)
           if (this.selectedDraw.constructor === Array && _item) {
             this.selectedDraw.push(cloneDeep(_item))
           }
@@ -887,12 +891,14 @@ export default class sbBoard {
     }
     if (!this.pencilPressing) {
       if (this.isObserver) {
-        this.hoverDraw = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+        // this.hoverDraw = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+        this.hoverDraw = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y)
         return;
       }
       if (!this.pencilPosition) {
         if (!this.spaceBar) {
-          document.documentElement.style.cursor = this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
+          // document.documentElement.style.cursor = this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsInsideDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
+          document.documentElement.style.cursor = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
         }
         
         if (this.selectedDraw) {
@@ -991,6 +997,14 @@ export default class sbBoard {
     }
     
     this.pencilPosition = null;
+
+    this.sbDom.dispatchEvent(new CustomEvent('pointerUp', { bubbles: true, detail: {
+      draw: this.selectedDraw,
+      point: {
+        x: e.clientX,
+        y: e.clientY
+      }
+    }}))
   }
   // 矩形Draw事件
   rectDownFn(e) {
@@ -1007,6 +1021,7 @@ export default class sbBoard {
     }
   }
   rectMoveFn(e, options) {
+    document.documentElement.style.cursor = 'crosshair'
     if (!this.pencilPressing) {
       return;
     }
@@ -1041,7 +1056,8 @@ export default class sbBoard {
     this.tmpRect = null;
     if (someOneRect.width > 20 || someOneRect.height > 20)  {
       // 记录已经画的rects
-      someOneRect['id'] = this.uuidv4Short()
+      someOneRect['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
+      this.specifyDrawId = null;
       this.originDraws.push(someOneRect)
       this.detectDrawsIsOverSize()
       this.selectedDraw = cloneDeep({
@@ -1057,6 +1073,14 @@ export default class sbBoard {
     }
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
+
+    this.sbDom.dispatchEvent(new CustomEvent('rectUp', { bubbles: true, detail: {
+      draw: this.selectedDraw,
+      point: {
+        x: e.clientX,
+        y: e.clientY
+      }
+    }}))
   }
   // 多边形填充事件
   polygonfillDownFn(e) {
@@ -1092,7 +1116,8 @@ export default class sbBoard {
       if (this.tmpPolygon.ways.length > 1) {
         if(this.detectTwoPointClose(this.tmpPolygon, {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
           this.setDrawType('pointer', false)
-          this.tmpPolygon['id'] = this.uuidv4Short()
+          this.tmpPolygon['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
+          this.specifyDrawId = null;
           this.tmpPolygon['closed'] = true;
           this.tmpPolygon['fillStyle'] = this.options.pencilStyle.fillStyle
           this.pencilPosition = null;
@@ -1158,7 +1183,8 @@ export default class sbBoard {
     }
     if (this.detectIsDBClick(e.timeStamp)) {
       this.setDrawType('pointer', false)
-      this.tmpPolygon['id'] = this.uuidv4Short()
+      this.tmpPolygon['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
+      this.specifyDrawId = null; 
       this.tmpPolygon['closed'] = true;
       this.pencilPosition = null;
       this.detectDrawsIsOverSize()
@@ -1701,7 +1727,7 @@ export default class sbBoard {
     // this.scrollbarSystem()
     
     // 设置背景图
-    if (this.bgObj) {
+    if (this.bgObj && this.bgObj.success) {
       this.sbCtx.globalCompositeOperation = "destination-over";
       this.sbCtx.drawImage(this.bgObj.data, 0, 0)
     }
@@ -1736,12 +1762,16 @@ export default class sbBoard {
           }
         })
       }
+
+      this.sbDom.dispatchEvent(new CustomEvent('deleteDraw', { bubbles: true, detail: {
+        draw: this.selectedDraw,
+      }}))
+
       this.selectedDraw = null;
       this.modifyRect = null;
       if (this.historyRecordHandler) {
         this.historyRecordHandler.recordChange(this.getAllDraws())
       }
-      
     }
   }
   changeDrawPoints(index, coordinate='x', delta) {
@@ -2170,8 +2200,6 @@ export default class sbBoard {
             case "polygon":
               _canvasCtx.beginPath();
               _canvasCtx.moveTo(val.x, val.y)
-              console.log('polygon')
-              console.dir(val)
               val.ways.forEach(wval => {
                 _canvasCtx.lineTo(wval.x, wval.y)
               })
@@ -2231,8 +2259,6 @@ export default class sbBoard {
             case "polygon":
               _canvasCtx.beginPath();
               _canvasCtx.moveTo(val.x, val.y)
-              console.log('polygon')
-              console.dir(val)
               val.ways.forEach(wval => {
                 _canvasCtx.lineTo(wval.x, wval.y)
               })
