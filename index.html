@@ -164,6 +164,10 @@
       <li class="tools-list-item">
         <button id="tycrect">tycrect</button>
       </li>
+      <!-- clip截取部分 -->
+      <li class="tools-list-item">
+        <button id="clipsection">clipsection</button>
+      </li>
       <!-- 设置图片 -->
       <li class="tools-list-item">
         <button id="pcbBig">pcbBig</button>
@@ -321,6 +325,23 @@
     bindEvent('brush', ()=>{
       console.log('brush')
       sbBoardIns.setDrawType('brush', true)
+    })
+    bindEvent('clipsection', async ()=>{
+      console.log('clipsection')
+      const mask = loadingMask()
+      document.body.appendChild(mask)
+      setTimeout(async ()=>{
+        const imgb64 = await sbBoardIns.clipImgSection({
+          x: 0,
+          y: 0,
+          width: 2000,
+          height: 2000,
+        })
+        if (imgb64) {
+          previewExportImg([imgb64])
+        }
+        mask.remove()
+      }, 100)
     })
     // bindEvent('circle', ()=>{
     //   console.log('circle')

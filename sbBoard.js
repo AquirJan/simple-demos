@@ -537,6 +537,18 @@ export default class sbBoard {
     }
     
   }
+  // 切割图片部分区域
+  clipImgSection(coordinate) {
+    return new Promise(resolve => {
+      const _canvas = document.createElement('canvas');
+      _canvas.width = coordinate.width
+      _canvas.height = coordinate.height
+      const _canvasCtx = _canvas.getContext('2d')
+      _canvasCtx.drawImage(this.bgObj.data, coordinate.x, coordinate.y, coordinate.width, coordinate.height, 0, 0, this.bgObj.width, this.bgObj.height)
+      const _img = _canvas.toDataURL('image/png', coordinate.quality || 1)
+      return resolve(_img)
+    })
+  }
   // 工具栏用方法end
   // 设置画图类型
   setDrawType(params, publicUse=true, options={}) {
