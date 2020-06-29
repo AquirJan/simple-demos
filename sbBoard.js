@@ -1254,7 +1254,7 @@ export default class sbBoard {
     }}))
   }
   // 多边形填充事件
-  polygonfillDownFn(e) {
+  polygonfillDownFn(e, options) {
     if (e.button === 0) {
       this.hoverPoint = {
         x: e.offsetX,
@@ -1263,7 +1263,7 @@ export default class sbBoard {
       this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
     }
   }
-  polygonfillMoveFn(e) {
+  polygonfillMoveFn(e, options) {
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
@@ -1274,7 +1274,7 @@ export default class sbBoard {
       document.documentElement.style.cursor = 'crosshair'
     }
     
-    this.drawPolygon(false, true)
+    this.drawPolygon(false, true, options.gco)
   }
   polygonfillUpFn(e, options) {
     this.hoverPoint = {
@@ -1282,7 +1282,7 @@ export default class sbBoard {
       y: e.offsetY,
     }
     if (!this.tmpPolygon) {
-      this.drawPolygon()
+      this.drawPolygon(false, false, options.gco)
     } else {
       if (this.tmpPolygon.ways.length > 1) {
         if(this.detectTwoPointClose(this.tmpPolygon, {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
@@ -1301,34 +1301,15 @@ export default class sbBoard {
           })
         } else {
           if (!this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
-            this.drawPolygon()
+            this.drawPolygon(false, false, options.gco)
           }
         }
         return;
       }
       if (!this.tmpPolygon.ways.length || !this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
-        this.drawPolygon()
+        this.drawPolygon(false, false, options.gco)
       }
     }
-    
-    // if (this.detectIsDBClick(e.timeStamp)) {
-    //   console.log('dbclick')
-    //   this.setDrawType('pointer', false)
-    //   this.tmpPolygon['id'] = this.uuidv4Short()
-    //   this.tmpPolygon['closed'] = true;
-    //   this.tmpPolygon['fillStyle'] = this.options.pencilStyle.fillStyle
-    //   this.pencilPosition = null;
-    //   this.detectDrawsIsOverSize()
-    //   this.originDraws.push(this.tmpPolygon)
-    //   this.tmpPolygon = null;
-    //   this.selectedDraw = cloneDeep({
-    //     data: this.originDraws[this.originDraws.length-1],
-    //     index: (this.originDraws.length-1)
-    //   })
-    // } else {
-    //   console.log('single click')
-    //   this.drawPolygon()
-    // }
   }
   // 多边形事件
   polygonDownFn(e) {
@@ -1639,6 +1620,7 @@ export default class sbBoard {
     // this.sbCtx.strokeStyle = '#fff'
     this.controlDots.forEach(val => {
       const circle = this.drawModifyDot(val)
+      this.sbCtx.globalCompositeOperation = 'source-over'
       this.sbCtx.fill(circle);
     })
   }
@@ -1772,10 +1754,9 @@ export default class sbBoard {
             this.labelRect(val, this.zoomSize, this.isObserver);
           }
         }
-        
         break;
       case "polygon":
-        this.sbCtx.globalCompositeOperation = 'source-over';
+        this.sbCtx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
         if (val.label){
           this.labelRect(val, this.zoomSize, this.isObserver);
         }
@@ -1801,6 +1782,7 @@ export default class sbBoard {
         this.sbCtx.globalCompositeOperation = "source-over";
         break;
       case "brush":
+        this.sbCtx.globalCompositeOperation = 'xor';
         this.sbCtx.lineWidth = val.lineWidth;
         this.sbCtx.strokeStyle = val.strokeStyle;
         this.sbCtx.stroke(val.path)
@@ -1816,15 +1798,6 @@ export default class sbBoard {
 
     // 默认状态
     this.sbCtx.globalCompositeOperation = "source-over";
-    // 设置背景图
-    // if (this.bgObj) {
-    //   // this.sbCtx.drawImage(this.bgObj.data, 0, 0)
-    //   this.sbCtx.fillStyle = '#fff'
-    //   this.sbCtx.beginPath();
-    //   this.sbCtx.rect(0, 0, this.bgObj.width, this.bgObj.height)
-    //   this.sbCtx.fill()
-    //   this.sbCtx.closePath();
-    // }
     // 添加已有brush
     if (this.existBrushObj) {
       this.sbCtx.drawImage(this.existBrushObj.data, 0, 0)
@@ -1850,6 +1823,7 @@ export default class sbBoard {
         // this.sbCtx.globalCompositeOperation = 'source-over';
       }
       if (this.drawType === 'brush') {
+        this.sbCtx.globalCompositeOperation = 'xor';
         this.sbCtx.lineWidth =  this.options.pencilStyle.brushSize;
         this.sbCtx.strokeStyle = this.options.pencilStyle.brushColor
         this.sbCtx.stroke(this.tmpPath2d)
@@ -1905,7 +1879,7 @@ export default class sbBoard {
       this.sbCtx.globalCompositeOperation = "destination-over";
       this.sbCtx.drawImage(this.bgObj.data, 0, 0)
     }
-    this.cursorRender(this.sbCtx)
+    // this.cursorRender(this.sbCtx)
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
@@ -2674,7 +2648,7 @@ export default class sbBoard {
     }
   }
   // 绘画多边形
-  drawPolygon(closed=false, moving=false) {
+  drawPolygon(closed=false, moving=false, gco) {
     if (!this.pencilPosition) {
       return
     }
@@ -2686,6 +2660,7 @@ export default class sbBoard {
         x: _x,
         y: _y,
         ways: [],
+        gco: gco,
         type: 'polygon'
       }
     } else {
@@ -2699,7 +2674,7 @@ export default class sbBoard {
     this.tmpPolygon['closed'] = closed;
   }
   // 绘画矩形
-  drawRect(cx, cy, label, strokeStyle, zIndex=1) {
+  drawRect(cx, cy, label, strokeStyle, zIndex=1, gco) {
     const _ds = this.getDeltaSize(cx, cy)
     const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
     const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
@@ -2709,6 +2684,7 @@ export default class sbBoard {
       width: _ds.width, 
       height: _ds.height,
       type: 'rect',
+      gco: gco,
       zIndex,
       label,
       strokeStyle
