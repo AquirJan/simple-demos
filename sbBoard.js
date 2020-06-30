@@ -1026,25 +1026,29 @@ export default class sbBoard {
       }
     }
     if (e.button === 2 || (this.isHandMove && e.button === 0 && this.zoomSize !== this.bgObj.scaled)) {
-      document.documentElement.style.cursor = this.isHandMove ? 'grabbing' : 'default'
-      if (!this.draging) {
-        this.rightPressing = true;
-        this.pencilPressing = true;
-        this.draging = true;
-        this.dragDownPoint = {
-          x: e.offsetX - this.dragOffset.x,
-          y: e.offsetY - this.dragOffset.y
-        }
-        return;
-      }
-      
-      if (!this.isObserver) {
-        this.findOutFoucusDraw(e)
-        if (this.pencilPressing) {
+      if (this.detectIsDBClick(e.timeStamp)) {
+        this.zoomReset()
+      } else {
+        document.documentElement.style.cursor = this.isHandMove ? 'grabbing' : 'default'
+        if (!this.draging) {
+          this.rightPressing = true;
+          this.pencilPressing = true;
+          this.draging = true;
+          this.dragDownPoint = {
+            x: e.offsetX - this.dragOffset.x,
+            y: e.offsetY - this.dragOffset.y
+          }
           return;
         }
-        this.pencilPressing = true;
-        this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+        
+        if (!this.isObserver) {
+          this.findOutFoucusDraw(e)
+          if (this.pencilPressing) {
+            return;
+          }
+          this.pencilPressing = true;
+          this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+        }
       }
     }
   }
