@@ -271,7 +271,7 @@ export default class sbBoard {
   // 设置背景图
   async setBackground(obj) {
     const _obj = Object.assign({
-      color: '#878',
+      fillStyle: 'red',
       src: ''
     }, obj)
     if (_obj.src) {
@@ -284,7 +284,9 @@ export default class sbBoard {
         }
       }
     } else {
-      this.sbCtx.fillStyle = _obj.fillStyle
+      this.bgObj = {
+        'fillStyle' : _obj.fillStyle
+      }
       this.zoomSize = 1;
     }
   }
@@ -995,7 +997,6 @@ export default class sbBoard {
         x: e.offsetX,
         y: e.offsetY
       }
-      console.log(this.ctrlKey)
       if (this.ctrlKey) {
         if (this.selectedDraw && !this.isObserver) {
           let _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
@@ -1728,6 +1729,7 @@ export default class sbBoard {
     this.selectedDraw = null;
     this.hiddenDraws = params;
   }
+  // 渲染单个draw
   renderSingleOriginDraws(val) {
     switch (val.type) {
       case 'rect':
@@ -1820,7 +1822,6 @@ export default class sbBoard {
         this.sbCtx.lineWidth =  this.options.pencilStyle.brushSize;
         this.sbCtx.strokeStyle = '#fff'
         this.sbCtx.stroke(this.tmpPath2d)
-        // this.sbCtx.globalCompositeOperation = 'source-over';
       }
       if (this.drawType === 'brush') {
         this.sbCtx.globalCompositeOperation = 'xor';
@@ -1875,14 +1876,162 @@ export default class sbBoard {
     // this.scrollbarSystem()
     
     // 设置背景图
-    if (this.bgObj && this.bgObj.success) {
-      this.sbCtx.globalCompositeOperation = "destination-over";
-      this.sbCtx.drawImage(this.bgObj.data, 0, 0)
+    if (this.bgObj) {
+      if (this.bgObj.success && this.bgObj.data) {
+        this.sbCtx.globalCompositeOperation = "destination-over";
+        this.sbCtx.drawImage(this.bgObj.data, 0, 0)
+      }
     }
     // this.cursorRender(this.sbCtx)
     window.requestAnimationFrame(()=>this.renderBoard())
     
   }
+  // 导出图片
+  exportPic(options) {
+    this.setDrawType('pointer')
+    const _options = Object.assign({}, {
+      type: 'origin', // draws, fusion, algorithm
+      quality:1,
+      // width: this.sbDom.width, 
+      // height: this.sbDom.height, 
+      file: {
+        name: 'exportPicture.png', 
+        options: {
+          type: "image/png"
+        }
+      }
+    }, options)
+    return new Promise((resolve)=> {
+      const _canvas = document.createElement('canvas');
+      const _width = this.bgObj ? this.bgObj.width : this.sbDom.width
+      const _height = this.bgObj ? this.bgObj.height : this.sbDom.height
+      _canvas.width = _width
+      _canvas.height = _height
+      const _canvasCtx = _canvas.getContext('2d')
+      if (_options.type === 'algorithm') {
+        if (this.existAlogrithmObj) {
+          _canvasCtx.drawImage(this.existAlogrithmObj.data, 0, 0)
+        } else {
+          _canvasCtx.globalCompositeOperation = "source-over";
+          _canvasCtx.fillStyle = '#000'
+          _canvasCtx.fillRect(0, 0, this.bgObj.width, this.bgObj.height)
+        }
+        
+        this.originDraws.forEach(val => {
+          switch (val.type) {
+            case "eraser":
+              _canvasCtx.strokeStyle = '#000'
+              _canvasCtx.lineWidth = val.lineWidth;
+              _canvasCtx.stroke(val.path)
+              break;
+            case "brush":
+              _canvasCtx.lineWidth = val.lineWidth
+              _canvasCtx.strokeStyle = '#fff'
+              _canvasCtx.stroke(val.path)
+              break;
+            case "polygon":
+              _canvasCtx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
+              _canvasCtx.beginPath();
+              _canvasCtx.moveTo(val.x, val.y)
+              val.ways.forEach(wval => {
+                _canvasCtx.lineTo(wval.x, wval.y)
+              })
+              _canvasCtx.closePath();
+              _canvasCtx.lineWidth = val.lineWidth
+              if (val.fillStyle) {
+                _canvasCtx.fillStyle = '#fff'
+                _canvasCtx.fill()
+              } else {
+                _canvasCtx.strokeStyle = val.strokeStyle
+                _canvasCtx.stroke()
+              }
+              if (val.gco!=='source-over') {
+                _canvasCtx.globalCompositeOperation = "source-over";
+              }
+              break;
+          }
+        });
+        
+        const _img = _canvas.toDataURL('image/png', _options.quality)
+      
+        if (_img) {
+          if (_options.file) {
+            return resolve(this.blobToFile(this.b64toBlob(_img), `exportPicture_algorithm.png`, _options.file.options))
+          }
+          return resolve(_img)
+        }
+      }
+      if (this.existBrushObj && _options.type !== 'origin') {
+        _canvasCtx.drawImage(this.existBrushObj.data, 0, 0)
+      }
+      if (_options.type === 'draws' || _options.type === 'fusion') {
+        this.originDraws.forEach(val => {
+          switch (val.type) {
+            case 'rect':
+              _canvasCtx.strokeStyle = val.strokeStyle ? val.strokeStyle : this.options.pencilStyle.strokeStyle
+              _canvasCtx.lineWidth = val.lineWidth ? val.lineWidth : this.options.pencilStyle.lineWidth
+              _canvasCtx.strokeRect(
+                val.x,
+                val.y,
+                val.width,
+                val.height
+              );
+              if (val.label){
+                this.labelRect(val, this.zoomSize, this.isObserver, _canvasCtx);
+              }
+              break;
+            case "eraser":
+              _canvasCtx.globalCompositeOperation = "destination-out";
+              _canvasCtx.strokeStyle = '#fff'
+              _canvasCtx.lineWidth = val.lineWidth;
+              _canvasCtx.stroke(val.path)
+              _canvasCtx.globalCompositeOperation = "source-over";
+              break;
+            case "brush":
+              _canvasCtx.globalCompositeOperation = "xor";
+              _canvasCtx.lineWidth = val.lineWidth
+              _canvasCtx.strokeStyle = val.strokeStyle
+              _canvasCtx.stroke(val.path)
+              break;
+            case "polygon":
+              _canvasCtx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
+              _canvasCtx.beginPath();
+              _canvasCtx.moveTo(val.x, val.y)
+              val.ways.forEach(wval => {
+                _canvasCtx.lineTo(wval.x, wval.y)
+              })
+              _canvasCtx.closePath();
+              _canvasCtx.lineWidth = val.lineWidth
+              if (val.fillStyle) {
+                _canvasCtx.fillStyle = val.fillStyle
+                _canvasCtx.fill()
+              } else {
+                _canvasCtx.strokeStyle = val.strokeStyle
+                _canvasCtx.stroke()
+              }
+              break;
+          }
+        });
+      }
+      
+      if (_options.type === 'origin' || _options.type === 'fusion') {
+        // 导出只有底图的图片
+        if (this.bgObj) {
+          _canvasCtx.globalCompositeOperation = "destination-over";
+          _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
+        }
+      }
+      const _img = _canvas.toDataURL('image/png', _options.quality)
+      
+      if (_img) {
+        if (_options.file) {
+          return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
+        }
+        return resolve(_img)
+      }
+    })
+  }
+  // 光标渲染
   cursorRender(ctx) {
     const _draw = this.cursorDraw
     if (_draw) {
@@ -2313,148 +2462,6 @@ export default class sbBoard {
         ia[i] = byteString.charCodeAt(i);
     }
     return new Blob([ab], { type: 'image/png' });
-  }
-  // 导出图片
-  exportPic(options) {
-    this.setDrawType('pointer')
-    const _options = Object.assign({}, {
-      type: 'origin', // draws, fusion, algorithm
-      quality:1,
-      // width: this.sbDom.width, 
-      // height: this.sbDom.height, 
-      file: {
-        name: 'exportPicture.png', 
-        options: {
-          type: "image/png"
-        }
-      }
-    }, options)
-    return new Promise((resolve)=> {
-      const _canvas = document.createElement('canvas');
-      const _width = this.bgObj ? this.bgObj.width : this.sbDom.width
-      const _height = this.bgObj ? this.bgObj.height : this.sbDom.height
-      _canvas.width = _width
-      _canvas.height = _height
-      const _canvasCtx = _canvas.getContext('2d')
-      if (_options.type === 'algorithm') {
-        
-        if (this.bgObj) {
-          _canvasCtx.fillStyle = '#000'
-          _canvasCtx.beginPath()
-          _canvasCtx.rect(0, 0, this.bgObj.width, this.bgObj.height)
-          _canvasCtx.fill()
-          _canvasCtx.closePath()
-        }
-        if (this.existAlogrithmObj) {
-          _canvasCtx.drawImage(this.existAlogrithmObj.data, 0, 0)
-        }
-        this.originDraws.forEach(val => {
-          switch (val.type) {
-            case "eraser":
-              _canvasCtx.strokeStyle = '#000'
-              _canvasCtx.lineWidth = val.lineWidth;
-              _canvasCtx.stroke(val.path)
-              break;
-            case "brush":
-              _canvasCtx.lineWidth = val.lineWidth
-              _canvasCtx.strokeStyle = '#fff'
-              _canvasCtx.stroke(val.path)
-              break;
-            case "polygon":
-              _canvasCtx.beginPath();
-              _canvasCtx.moveTo(val.x, val.y)
-              val.ways.forEach(wval => {
-                _canvasCtx.lineTo(wval.x, wval.y)
-              })
-              _canvasCtx.closePath();
-              _canvasCtx.lineWidth = val.lineWidth
-              if (val.fillStyle) {
-                _canvasCtx.fillStyle = '#fff'
-                _canvasCtx.fill()
-              } else {
-                _canvasCtx.strokeStyle = val.strokeStyle
-                _canvasCtx.stroke()
-              }
-              break;
-          }
-        });
-        
-        const _img = _canvas.toDataURL('image/png', _options.quality)
-      
-        if (_img) {
-          if (_options.file) {
-            return resolve(this.blobToFile(this.b64toBlob(_img), `exportPicture_algorithm.png`, _options.file.options))
-          }
-          return resolve(_img)
-        }
-      }
-      if (this.existBrushObj && _options.type !== 'origin') {
-        _canvasCtx.drawImage(this.existBrushObj.data, 0, 0)
-      }
-      if (_options.type === 'draws' || _options.type === 'fusion') {
-        this.originDraws.forEach(val => {
-          switch (val.type) {
-            case 'rect':
-              _canvasCtx.strokeStyle = val.strokeStyle ? val.strokeStyle : this.options.pencilStyle.strokeStyle
-              _canvasCtx.lineWidth = val.lineWidth ? val.lineWidth : this.options.pencilStyle.lineWidth
-              _canvasCtx.strokeRect(
-                val.x,
-                val.y,
-                val.width,
-                val.height
-              );
-              if (val.label){
-                this.labelRect(val, this.zoomSize, this.isObserver, _canvasCtx);
-              }
-              break;
-            case "eraser":
-              _canvasCtx.globalCompositeOperation = "destination-out";
-              _canvasCtx.strokeStyle = '#fff'
-              _canvasCtx.lineWidth = val.lineWidth;
-              _canvasCtx.stroke(val.path)
-              _canvasCtx.globalCompositeOperation = "source-over";
-              break;
-            case "brush":
-              _canvasCtx.lineWidth = val.lineWidth
-              _canvasCtx.strokeStyle = val.strokeStyle
-              _canvasCtx.stroke(val.path)
-              break;
-            case "polygon":
-              _canvasCtx.beginPath();
-              _canvasCtx.moveTo(val.x, val.y)
-              val.ways.forEach(wval => {
-                _canvasCtx.lineTo(wval.x, wval.y)
-              })
-              _canvasCtx.closePath();
-              _canvasCtx.lineWidth = val.lineWidth
-              if (val.fillStyle) {
-                _canvasCtx.fillStyle = val.fillStyle
-                _canvasCtx.fill()
-              } else {
-                _canvasCtx.strokeStyle = val.strokeStyle
-                _canvasCtx.stroke()
-              }
-              break;
-          }
-        });
-      }
-      
-      if (_options.type === 'origin' || _options.type === 'fusion') {
-        // 导出只有底图的图片
-        if (this.bgObj) {
-          _canvasCtx.globalCompositeOperation = "destination-over";
-          _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
-        }
-      }
-      const _img = _canvas.toDataURL('image/png', _options.quality)
-      
-      if (_img) {
-        if (_options.file) {
-          return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
-        }
-        return resolve(_img)
-      }
-    })
   }
   // 计算画笔是否在modifyRect上 
   calcIsOnModifyRect(x, y){
