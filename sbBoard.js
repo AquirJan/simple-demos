@@ -139,11 +139,9 @@ export default class sbBoard {
 
     window.addEventListener('resize', (e)=>{
       let _wrapRect = null;
-      if (this.options.wrap.innerWidth) {
-        _wrapRect = {width: this.options.wrap.innerWidth, height: this.options.wrap.innerHeight}
-      } else {
-        _wrapRect = this.options.wrap.getBoundingClientRect()
-      }
+      this.sbDom.width = 0
+      this.sbDom.height = 0
+      _wrapRect = this.options.wrap.getBoundingClientRect()
       if (!_wrapRect) {
         return console.error('options.wrap error')
       }
@@ -151,9 +149,7 @@ export default class sbBoard {
       this.options['height'] = _wrapRect.height
       this.sbDom.width = this.options.width
       this.sbDom.height = this.options.height
-      if(this.bgObj) {
-        this.setBackground({src:this.bgObj.src})
-      }
+      this.setBackground({src:this.bgObj.src})
     })
     this.renderBoard()
     return this;
