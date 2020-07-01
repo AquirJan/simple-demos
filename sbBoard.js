@@ -1435,10 +1435,8 @@ export default class sbBoard {
     let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
     let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
     this.setCursorPosition(_x, _y)
-    if (this.pencilPressing){
-      if (this.tmpPath2d) {
-        this.tmpPath2d.lineTo(_x, _y)
-      }
+    if (this.pencilPressing && this.tmpPath2d){
+      this.tmpPath2d.lineTo(_x, _y)
     }
   }
   eraserUpFn(e){
@@ -1449,6 +1447,9 @@ export default class sbBoard {
           path: this.tmpPath2d,
           lineWidth: this.options.pencilStyle.eraserSize
         })
+        let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
+        let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
+        this.tmpPath2d.lineTo(_x, _y)
         this.tmpPath2d = null;
         // 记录操作
         if (this.historyRecordHandler) {
@@ -1788,12 +1789,14 @@ export default class sbBoard {
       case "eraser":
         ctx.globalCompositeOperation = "destination-out";
         ctx.strokeStyle = '#fff'
+        ctx.lineCap = 'square';
         ctx.lineWidth = val.lineWidth;
         ctx.stroke(val.path)
         ctx.globalCompositeOperation = "source-over";
         break;
       case "brush":
         ctx.globalCompositeOperation = 'xor';
+        ctx.lineCap = 'square';
         ctx.lineWidth = val.lineWidth;
         ctx.strokeStyle = val.strokeStyle;
         ctx.stroke(val.path)
@@ -1942,11 +1945,13 @@ export default class sbBoard {
         this.originDraws.forEach(val => {
           switch (val.type) {
             case "eraser":
+              _canvasCtx.lineCap = 'square';
               _canvasCtx.strokeStyle = '#000'
               _canvasCtx.lineWidth = val.lineWidth;
               _canvasCtx.stroke(val.path)
               break;
             case "brush":
+              _canvasCtx.lineCap = 'square';
               _canvasCtx.lineWidth = val.lineWidth
               _canvasCtx.strokeStyle = '#fff'
               _canvasCtx.stroke(val.path)
@@ -2004,6 +2009,7 @@ export default class sbBoard {
               break;
             case "eraser":
               _canvasCtx.globalCompositeOperation = "destination-out";
+              _canvasCtx.lineCap = 'square';
               _canvasCtx.strokeStyle = '#fff'
               _canvasCtx.lineWidth = val.lineWidth;
               _canvasCtx.stroke(val.path)
@@ -2012,6 +2018,7 @@ export default class sbBoard {
             case "brush":
               _canvasCtx.globalCompositeOperation = "xor";
               _canvasCtx.lineWidth = val.lineWidth
+              _canvasCtx.lineCap = 'square';
               _canvasCtx.strokeStyle = val.strokeStyle
               _canvasCtx.stroke(val.path)
               break;
