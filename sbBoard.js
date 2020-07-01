@@ -15,9 +15,9 @@ export default class sbBoard {
         strokeStyle: '#333',
         fillStyle: 'red',
         lineWidth: 2,
-        brushSize: 50,
+        brushSize: 10,
         brushColor: 'rgba(0, 195, 255, 0.5)',
-        eraserSize: 50,
+        eraserSize: 10,
       },
       fontFamily: "PingFang SC, Microsoft YaHei, Helvetica, Helvetica Neue, Hiragino Sans GB, Arial, sans-serif",
     }, options);
@@ -154,25 +154,28 @@ export default class sbBoard {
     this.renderBoard()
     return this;
   }
-  // cursor状态图标设置
-  setCursor(x, y, strokeStyle, fillStyle){
-    if (!this.cursorDraw) {
-      this.cursorDraw = {
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0
-      }
+  // 设置光标位置
+  setCursorPosition(x, y){
+    if (this.cursorDraw) {
+      this.cursorDraw['x'] = x - this.cursorDraw.width/2
+      this.cursorDraw['y'] = y - this.cursorDraw.height/2
     }
-    this.cursorDraw['x'] = x
-    this.cursorDraw['y'] = y
+  }
+  // 初始化cursor光标
+  initCursor(strokeStyle, fillStyle){
+    this.cursorDraw = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    }
     this.cursorDraw['strokeStyle'] = strokeStyle ? strokeStyle : '#333';
     this.cursorDraw['fillStyle'] = fillStyle ? fillStyle : '#efefef';
-    let size = 10/this.zoomSize;
+    let size = 10;
     if (this.drawType === 'brush') {
-      size = this.options.pencilStyle.brushSize ? this.options.pencilStyle.brushSize/this.zoomSize : size
+      size = this.options.pencilStyle.brushSize ? this.options.pencilStyle.brushSize : size;
     } else if (this.drawType === 'eraser') {
-      size = this.options.pencilStyle.eraserSize ? this.options.pencilStyle.eraserSize/this.zoomSize : size
+      size = this.options.pencilStyle.eraserSize ? this.options.pencilStyle.eraserSize : size
     }
     this.cursorDraw['width'] = size
     this.cursorDraw['height'] = size
@@ -581,7 +584,7 @@ export default class sbBoard {
       for(let key in options) {
         this.options.pencilStyle[key] = options[key]
       }
-
+      console.log(this.options.pencilStyle)
       this.pencilDownFn = (e)=>this[`${this.drawType}DownFn`](e, options)
       this.sbDom.addEventListener('mousedown', this.pencilDownFn, false)
       this.pencilMoveFn = (e)=>this[`${this.drawType}MoveFn`](e, options)
@@ -590,7 +593,11 @@ export default class sbBoard {
       this.sbDom.addEventListener('mouseup', this.pencilUpFn, false)
       this.sbDom.addEventListener('mouseout', this.pencilUpFn, false)
 
-      this.setCursor()
+      if (['brush', 'eraser'].includes(this.drawType)) {
+        this.initCursor()
+      } else {
+        this.cursorDraw = null;
+      }
     }
   }
   getPointerPosition(){
@@ -996,7 +1003,6 @@ export default class sbBoard {
       if (this.ctrlKey) {
         if (this.selectedDraw && !this.isObserver) {
           let _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
-          console.log(_item)
           if (this.selectedDraw.constructor === Array && _item) {
             this.selectedDraw.push(cloneDeep(_item))
           }
@@ -1366,21 +1372,20 @@ export default class sbBoard {
     }
   }
   brushMoveFn(e){
-    document.documentElement.style.cursor = 'crosshair'
-    // document.documentElement.style.cursor = 'none'
+    // document.documentElement.style.cursor = 'crosshair'
+    document.documentElement.style.cursor = 'none'
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
     }
+    let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
+    let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
+    this.setCursorPosition(_x, _y)
     if (this.pencilPressing) {
-      
       if (this.tmpPath2d) {
-        let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
-        let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
         this.tmpPath2d.lineTo(_x, _y)
       }
     }
-    this.setCursor(this.hoverPoint.x, this.hoverPoint.y)
   }
   brushUpFn(e){
     if (this.pencilPressing) {
@@ -1391,12 +1396,6 @@ export default class sbBoard {
       if (this.tmpPath2d) {
         let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
         let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
-        // if (this.bgObj) {
-        //   _x = _x < this.bgObj.offsetX ? this.bgObj.offsetX : _x;
-        //   _y = _y < this.bgObj.offsetY ? this.bgObj.offsetY : _y;
-        //   _x = _x > (this.bgObj.offsetX+this.bgObj.width) ? this.bgObj.offsetX+this.bgObj.width : _x;
-        //   _y = _x > (this.bgObj.offsetY+this.bgObj.height) ? (this.bgObj.offsetY+this.bgObj.height) : _y;
-        // }
         this.tmpPath2d.lineTo(_x, _y)
         this.originDraws.push({
           type: 'brush',
@@ -1416,7 +1415,6 @@ export default class sbBoard {
         x: e.offsetX,
         y: e.offsetY
       }
-      
       this.tmpPath2d = new Path2D()
       this.tmpPath2d.moveTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       this.pencilPressing = true;
@@ -1424,15 +1422,17 @@ export default class sbBoard {
   }
   eraserMoveFn(e){
     // document.documentElement.style.cursor = 'crosshair'
-    
+    document.documentElement.style.cursor = 'none'
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY
     }
-    
+    let _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize
+    let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
+    this.setCursorPosition(_x, _y)
     if (this.pencilPressing){
       if (this.tmpPath2d) {
-        this.tmpPath2d.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
+        this.tmpPath2d.lineTo(_x, _y)
       }
     }
   }
@@ -1626,11 +1626,11 @@ export default class sbBoard {
     })
   }
   // 初始化画笔样式
-  initPencilStyle(stroke, size, fill) {
+  setCtxStyle(ctx, stroke, size, fill) {
     // this.sbCtx.setLineDash([]);
-    this.sbCtx.strokeStyle = stroke !== undefined ? stroke : this.options.pencilStyle.strokeStyle
-    this.sbCtx.lineWidth = ( size !== undefined ? size : this.options.pencilStyle.lineWidth ) / this.zoomSize
-    this.sbCtx.fillStyle = fill !== undefined ? fill : 'transparent'
+    ctx.strokeStyle = stroke !== undefined ? stroke : this.options.pencilStyle.strokeStyle
+    ctx.lineWidth = ( size !== undefined ? size : this.options.pencilStyle.lineWidth ) / this.zoomSize
+    ctx.fillStyle = fill !== undefined ? fill : 'transparent'
   }
   setBrushStyle(size, color) {
     if (size){
@@ -1730,14 +1730,14 @@ export default class sbBoard {
     this.hiddenDraws = params;
   }
   // 渲染单个draw
-  renderSingleOriginDraws(val) {
+  renderSingleOriginDraws(ctx, val) {
     switch (val.type) {
       case 'rect':
-        this.sbCtx.globalCompositeOperation = 'source-over';
+        ctx.globalCompositeOperation = 'source-over';
         if (this.hiddenDraws) {
           if(!val.label) {
-            this.initPencilStyle(val.strokeStyle, val.lineWidth)
-            this.sbCtx.strokeRect(
+            this.setCtxStyle(ctx, val.strokeStyle, val.lineWidth)
+            ctx.strokeRect(
               val.x,
               val.y,
               val.width,
@@ -1745,8 +1745,8 @@ export default class sbBoard {
             );
           }
         } else {
-          this.initPencilStyle(val.strokeStyle, val.lineWidth)
-          this.sbCtx.strokeRect(
+          this.setCtxStyle(ctx, val.strokeStyle, val.lineWidth)
+          ctx.strokeRect(
             val.x,
             val.y,
             val.width,
@@ -1758,36 +1758,36 @@ export default class sbBoard {
         }
         break;
       case "polygon":
-        this.sbCtx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
+        ctx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
         if (val.label){
           this.labelRect(val, this.zoomSize, this.isObserver);
         }
-        this.sbCtx.beginPath();
-        this.sbCtx.moveTo(val.x, val.y)
+        ctx.beginPath();
+        ctx.moveTo(val.x, val.y)
         val.ways.forEach(wval => {
-          this.sbCtx.lineTo(wval.x, wval.y)
+          ctx.lineTo(wval.x, wval.y)
         })
-        this.sbCtx.closePath();
+        ctx.closePath();
         if (val.fillStyle) {
-          this.initPencilStyle(val.fillStyle, val.lineWidth, val.fillStyle)
-          this.sbCtx.fill()
+          this.setCtxStyle(ctx, val.fillStyle, val.lineWidth, val.fillStyle)
+          ctx.fill()
         } else {
-          this.initPencilStyle(val.strokeStyle, val.lineWidth)
-          this.sbCtx.stroke()
+          this.setCtxStyle(ctx, val.strokeStyle, val.lineWidth)
+          ctx.stroke()
         }
         break;
       case "eraser":
-        this.sbCtx.globalCompositeOperation = "destination-out";
-        this.sbCtx.strokeStyle = '#fff'
-        this.sbCtx.lineWidth = val.lineWidth;
-        this.sbCtx.stroke(val.path)
-        this.sbCtx.globalCompositeOperation = "source-over";
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = val.lineWidth;
+        ctx.stroke(val.path)
+        ctx.globalCompositeOperation = "source-over";
         break;
       case "brush":
-        this.sbCtx.globalCompositeOperation = 'xor';
-        this.sbCtx.lineWidth = val.lineWidth;
-        this.sbCtx.strokeStyle = val.strokeStyle;
-        this.sbCtx.stroke(val.path)
+        ctx.globalCompositeOperation = 'xor';
+        ctx.lineWidth = val.lineWidth;
+        ctx.strokeStyle = val.strokeStyle;
+        ctx.stroke(val.path)
         break;
     }
   }
@@ -1808,10 +1808,10 @@ export default class sbBoard {
     // 已有draws
     if (this.isObserver && this.hoverDraw) {
       const _draw = this.hoverDraw.data
-      this.renderSingleOriginDraws(_draw)
+      this.renderSingleOriginDraws(this.sbCtx, _draw)
     } else {
       this.originDraws.forEach(val => {
-        this.renderSingleOriginDraws(val)
+        this.renderSingleOriginDraws(this.sbCtx, val)
       })
     }
     
@@ -1819,7 +1819,7 @@ export default class sbBoard {
     if (this.tmpPath2d) {
       if (this.drawType === 'eraser') {
         this.sbCtx.globalCompositeOperation = "destination-out";
-        this.sbCtx.lineWidth =  this.options.pencilStyle.brushSize;
+        this.sbCtx.lineWidth =  this.options.pencilStyle.eraserSize;
         this.sbCtx.strokeStyle = '#fff'
         this.sbCtx.stroke(this.tmpPath2d)
       }
@@ -1840,7 +1840,7 @@ export default class sbBoard {
         this.tmpRect.width,
         this.tmpRect.height,
       )
-      this.initPencilStyle(this.tmpRect.strokeStyle, this.tmpRect.lineWidth, this.tmpRect.fillStyle)
+      this.setCtxStyle(this.sbCtx, this.tmpRect.strokeStyle, this.tmpRect.lineWidth, this.tmpRect.fillStyle)
       if (this.tmpRect.fillStyle) {
         this.sbCtx.fill(_tmpRect);
       }
@@ -1858,7 +1858,7 @@ export default class sbBoard {
       } else {
         this.sbCtx.lineTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       }
-      this.initPencilStyle(this.tmpPolygon.strokeStyle, this.tmpPolygon.lineWidth)
+      this.setCtxStyle(this.sbCtx, this.tmpPolygon.strokeStyle, this.tmpPolygon.lineWidth)
       this.sbCtx.stroke()
     }
     
@@ -1876,15 +1876,28 @@ export default class sbBoard {
     // this.scrollbarSystem()
     
     // 设置背景图
-    if (this.bgObj) {
-      if (this.bgObj.success && this.bgObj.data) {
-        this.sbCtx.globalCompositeOperation = "destination-over";
-        this.sbCtx.drawImage(this.bgObj.data, 0, 0)
-      }
-    }
-    // this.cursorRender(this.sbCtx)
+    this.renderBackground(this.sbCtx)
+    this.renderCursor(this.sbCtx)
     window.requestAnimationFrame(()=>this.renderBoard())
     
+  }
+  // 设置背景图
+  renderBackground(ctx) {
+    if (this.bgObj) {
+      if (this.bgObj.success && this.bgObj.data) {
+        ctx.globalCompositeOperation = "destination-over";
+        ctx.drawImage(this.bgObj.data, 0, 0)
+      }
+    }
+  }
+  // 光标渲染
+  renderCursor(ctx) {
+    const _draw = this.cursorDraw
+    if (_draw) {
+      ctx.globalCompositeOperation = "source-over";
+      this.setCtxStyle(ctx, _draw.strokeStyle, _draw.lineWidth, _draw.fillStyle)
+      ctx.fillRect(_draw.x, _draw.y, _draw.width, _draw.height)
+    }
   }
   // 导出图片
   exportPic(options) {
@@ -2030,21 +2043,6 @@ export default class sbBoard {
         return resolve(_img)
       }
     })
-  }
-  // 光标渲染
-  cursorRender(ctx) {
-    const _draw = this.cursorDraw
-    if (_draw) {
-      const _tmpCursor = new Path2D()
-      _tmpCursor.rect(
-        _draw.x,
-        _draw.y,
-        _draw.width,
-        _draw.height,
-      )
-      this.initPencilStyle(_draw.strokeStyle, _draw.lineWidth, _draw.fillStyle)
-      ctx.fill(_tmpCursor)
-    }
   }
   // 滚动缩放
   sbDomWheel(e) {
