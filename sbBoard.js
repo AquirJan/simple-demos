@@ -157,8 +157,10 @@ export default class sbBoard {
   // 设置光标位置
   setCursorPosition(x, y){
     if (this.cursorDraw) {
-      this.cursorDraw['x'] = x - this.cursorDraw.width/2
-      this.cursorDraw['y'] = y - this.cursorDraw.height/2
+      this.cursorDraw['width'] = this.cursorDraw.size
+      this.cursorDraw['height'] = this.cursorDraw.size
+      this.cursorDraw['x'] = x - this.cursorDraw.size/2
+      this.cursorDraw['y'] = y - this.cursorDraw.size/2
     }
   }
   // 初始化cursor光标
@@ -166,6 +168,7 @@ export default class sbBoard {
     this.cursorDraw = {
       x: 0,
       y: 0,
+      size: 0,
       width: 0,
       height: 0,
     }
@@ -177,8 +180,7 @@ export default class sbBoard {
     } else if (this.drawType === 'eraser') {
       size = this.options.pencilStyle.eraserSize ? this.options.pencilStyle.eraserSize : size
     }
-    this.cursorDraw['width'] = size
-    this.cursorDraw['height'] = size
+    this.cursorDraw['size'] = size
   }
   // 历史记录初始化
   initActionHistory(historys){
@@ -584,7 +586,6 @@ export default class sbBoard {
       for(let key in options) {
         this.options.pencilStyle[key] = options[key]
       }
-      console.log(this.options.pencilStyle)
       this.pencilDownFn = (e)=>this[`${this.drawType}DownFn`](e, options)
       this.sbDom.addEventListener('mousedown', this.pencilDownFn, false)
       this.pencilMoveFn = (e)=>this[`${this.drawType}MoveFn`](e, options)
@@ -1404,6 +1405,10 @@ export default class sbBoard {
           strokeStyle: this.options.pencilStyle.brushColor
         })
         this.tmpPath2d = null;
+        // 记录操作
+        if (this.historyRecordHandler) {
+          this.historyRecordHandler.recordChange(this.getAllDraws())
+        }
       }
       this.pencilPressing = false
     }
@@ -1445,6 +1450,10 @@ export default class sbBoard {
           lineWidth: this.options.pencilStyle.eraserSize
         })
         this.tmpPath2d = null;
+        // 记录操作
+        if (this.historyRecordHandler) {
+          this.historyRecordHandler.recordChange(this.getAllDraws())
+        }
       }
       this.pencilPressing = false;
     }
@@ -2445,6 +2454,15 @@ export default class sbBoard {
       } 
     }
     return _flag;
+  }
+  // 文件转base64
+  toBase64 (file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
   }
   // blob 转成文件
   blobToFile(theBlob, fileName='exportPicture.png', options={type: "image/png"}){

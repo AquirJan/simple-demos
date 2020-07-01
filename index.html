@@ -292,7 +292,7 @@
       sbBoardIns.zoomReset()
     })
     bindEvent('onward', ()=>{
-      console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
+      // console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
       if (sbBoardIns.getHistoryRecordsLength()>0 && sbBoardIns.getRevokedStep() > 0) {
         sbBoardIns.onward()
       } else {
@@ -300,7 +300,7 @@
       }
     })
     bindEvent('revoke', ()=>{
-      console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
+      // console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
       if (sbBoardIns.getHistoryRecordsLength() > 1 ) {
         sbBoardIns.revoke()
       } else {
