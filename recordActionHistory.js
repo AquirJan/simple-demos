@@ -65,5 +65,10 @@ export default class recordActionHistory {
 
     return this
   }
-
+  destroy() {
+    this.options = null;
+    this.revokedStep = null;
+    this.showoffHistoryArray = null;
+    this.historyActionArray = null;
+  }
 }

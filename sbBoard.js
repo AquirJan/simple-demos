@@ -203,13 +203,9 @@ export default class sbBoard {
   }
   // 清空历史操作
   reinitRecordHistory(historys) {
-    return new Promise((resolve) => {
-      delete this.historyRecordHandler
-      setTimeout(()=> {
-        this.initActionHistory(historys)
-        resolve(true)
-      }, 300)
-    })
+    this.historyRecordHandler.destroy()
+    this.historyRecordHandler = null;
+    this.initActionHistory(historys)
   }
   // 历史记录操作,后退
   revoke(){
