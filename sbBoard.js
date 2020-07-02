@@ -149,7 +149,9 @@ export default class sbBoard {
       this.options['height'] = _wrapRect.height
       this.sbDom.width = this.options.width
       this.sbDom.height = this.options.height
-      this.setBackground({src:this.bgObj.src})
+      if (this.bgObj && this.bgObj.src)  {
+        this.setBackground({src:this.bgObj.src})
+      }
     })
     this.renderBoard()
     return this;
@@ -431,6 +433,8 @@ export default class sbBoard {
       this.originDraws = []
       this.selectedDraw = null;
       this.bgObj = null;
+      this.existBrushObj = null;
+      this.existAlogrithmObj = null;
     }
     if (this.bgObj) {
       clearSize ={
@@ -1496,7 +1500,7 @@ export default class sbBoard {
   // 导出draws数据
   exportDrawsData() {
     return this.originDraws.filter(val=>{
-      if (val.type !== 'brush' && val.type !== 'eraser') {
+      // if (val.type !== 'brush' && val.type !== 'eraser') {
         val['x'] = this.normalFloat(val.x)
         val['y'] = this.normalFloat(val.y)
         val['width'] = val.width ? this.normalFloat(val.width) : undefined
@@ -1508,7 +1512,7 @@ export default class sbBoard {
           })
         }
         return val
-      }
+      // }
     })
   }
   // 获取起点与终点之间的尺寸
@@ -1790,6 +1794,7 @@ export default class sbBoard {
         ctx.globalCompositeOperation = "destination-out";
         ctx.strokeStyle = '#fff'
         ctx.lineCap = 'square';
+        ctx.lineJoin = 'miter';
         ctx.lineWidth = val.lineWidth;
         ctx.stroke(val.path)
         ctx.globalCompositeOperation = "source-over";
@@ -1797,6 +1802,7 @@ export default class sbBoard {
       case "brush":
         ctx.globalCompositeOperation = 'xor';
         ctx.lineCap = 'square';
+        ctx.lineJoin = 'miter';
         ctx.lineWidth = val.lineWidth;
         ctx.strokeStyle = val.strokeStyle;
         ctx.stroke(val.path)
@@ -1813,7 +1819,7 @@ export default class sbBoard {
     // 默认状态
     this.sbCtx.globalCompositeOperation = "source-over";
     // 添加已有brush
-    if (this.existBrushObj) {
+    if (this.existBrushObj && this.existBrushObj.success) {
       this.sbCtx.drawImage(this.existBrushObj.data, 0, 0)
     }
 
@@ -1934,7 +1940,7 @@ export default class sbBoard {
       _canvas.height = _height
       const _canvasCtx = _canvas.getContext('2d')
       if (_options.type === 'algorithm') {
-        if (this.existAlogrithmObj) {
+        if (this.existAlogrithmObj && this.existAlogrithmObj.success) {
           _canvasCtx.drawImage(this.existAlogrithmObj.data, 0, 0)
         } else {
           _canvasCtx.globalCompositeOperation = "source-over";
@@ -1946,12 +1952,14 @@ export default class sbBoard {
           switch (val.type) {
             case "eraser":
               _canvasCtx.lineCap = 'square';
+              _canvasCtx.lineJoin = 'miter';
               _canvasCtx.strokeStyle = '#000'
               _canvasCtx.lineWidth = val.lineWidth;
               _canvasCtx.stroke(val.path)
               break;
             case "brush":
               _canvasCtx.lineCap = 'square';
+              _canvasCtx.lineJoin = 'miter';
               _canvasCtx.lineWidth = val.lineWidth
               _canvasCtx.strokeStyle = '#fff'
               _canvasCtx.stroke(val.path)
@@ -1988,7 +1996,7 @@ export default class sbBoard {
           return resolve(_img)
         }
       }
-      if (this.existBrushObj && _options.type !== 'origin') {
+      if (this.existBrushObj && this.existBrushObj.success && _options.type !== 'origin') {
         _canvasCtx.drawImage(this.existBrushObj.data, 0, 0)
       }
       if (_options.type === 'draws' || _options.type === 'fusion') {
@@ -2010,6 +2018,7 @@ export default class sbBoard {
             case "eraser":
               _canvasCtx.globalCompositeOperation = "destination-out";
               _canvasCtx.lineCap = 'square';
+              _canvasCtx.lineJoin = 'miter';
               _canvasCtx.strokeStyle = '#fff'
               _canvasCtx.lineWidth = val.lineWidth;
               _canvasCtx.stroke(val.path)
@@ -2019,6 +2028,7 @@ export default class sbBoard {
               _canvasCtx.globalCompositeOperation = "xor";
               _canvasCtx.lineWidth = val.lineWidth
               _canvasCtx.lineCap = 'square';
+              _canvasCtx.lineJoin = 'miter';
               _canvasCtx.strokeStyle = val.strokeStyle
               _canvasCtx.stroke(val.path)
               break;
