@@ -73,6 +73,8 @@ export default class sbBoard {
     this.isHandMove = false;
     this.cursorDraw = null;
     this.specifyDrawId = null;
+    this.windowResizeFn = null;
+    this.windowResizeTimer = null;
     return this.init()
   }
   // 初始化
@@ -137,7 +139,17 @@ export default class sbBoard {
       e.preventDefault()
     }
 
-    window.addEventListener('resize', (e)=>{
+    this.windowResizeFn = (e) => this.windowResize(e)
+    window.addEventListener('resize', this.windowResizeFn, false)
+    
+    this.renderBoard()
+    return this;
+  }
+  windowResize(e) {
+    if (this.windowResizeTimer) {
+      clearTimeout(this.windowResizeTimer)
+    }
+    this.windowResizeTimer = setTimeout(async () => {
       let _wrapRect = null;
       this.sbDom.width = 0
       this.sbDom.height = 0
@@ -150,11 +162,11 @@ export default class sbBoard {
       this.sbDom.width = this.options.width
       this.sbDom.height = this.options.height
       if (this.bgObj && this.bgObj.src)  {
-        this.setBackground({src:this.bgObj.src})
+        const _b64 = await this.imageToBase64(this.bgObj)
+        this.setBackground({src: _b64})
       }
-    })
-    this.renderBoard()
-    return this;
+    }, 30)
+    
   }
   // 设置光标位置
   setCursorPosition(x, y){
@@ -235,7 +247,9 @@ export default class sbBoard {
   }
   // 销毁
   destroy() {
+    this.sbDom.remove()
     this.sbWrap.remove()
+    window.removeEventListener('resize', this.windowResizeFn, false)
   }
   // 获取当前选中框框
   getSelectedDraw(){
@@ -296,6 +310,8 @@ export default class sbBoard {
     }, obj)
     if (_obj.src) {
       this.existBrushObj = await this.asyncLoadImage(_obj.src)
+    } else {
+      this.existBrushObj = obj
     }
   }
   // 设置已有算法特定图
@@ -305,6 +321,9 @@ export default class sbBoard {
     }, obj)
     if (_obj.src) {
       this.existAlogrithmObj = await this.asyncLoadImage(_obj.src)
+      // console.log(this.existAlogrithmObj)
+      // const detectResult = await this.detectIsMarked(this.existAlogrithmObj)
+      // console.log(detectResult)
     }
   }
   // 找出4个极点
@@ -455,6 +474,83 @@ export default class sbBoard {
     const _min = Math.min(this.bgObj.scaled, 1)
     return Math.max(_min, Math.min(parseFloat(size.toFixed(3)), max));
   }
+  // 转换至用户的笔刷图
+  changeToPreviewBrush(imgObj, r=0, g=0, b=0, a=255, quality=1) {
+    return new Promise(async resolve=>{
+      // console.log(imgObj)
+      if (!imgObj || !imgObj.data) {
+        console.log('---没有找到图像数据---')
+        resolve({
+          success: false,
+          msg: '---没有找到图像数据---'
+        });
+      }
+      const _canvas = document.createElement('canvas');
+      _canvas.width = imgObj.width
+      _canvas.height = imgObj.height
+      const _canvasCtx = _canvas.getContext('2d')
+      _canvasCtx.drawImage(imgObj.data, 0, 0)
+      let _imgData = _canvasCtx.getImageData(0, 0, _canvas.width, _canvas.height)
+      // console.log(_imgData.data)
+      if (_imgData && _imgData.data) {
+        for (let i=0; i<_imgData.data.length; i += 4) {
+          // 根据白色转其他颜色
+          if (_imgData.data[i] !== 0 && _imgData.data[i+1] !== 0 && _imgData.data[i+2] !== 0) {
+            _imgData.data[i] = r
+            _imgData.data[i+1] = g
+            _imgData.data[i+2] = b
+            _imgData.data[i+3] = 255*a
+          } else if(_imgData.data[i] === 0 && _imgData.data[i+1] === 0 && _imgData.data[i+2] === 0) {
+            _imgData.data[i] = 255
+            _imgData.data[i+1] = 255
+            _imgData.data[i+2] = 255
+            _imgData.data[i+3] = 0
+          }
+        }
+        _canvasCtx.putImageData(_imgData, 0, 0);
+        const _img = _canvas.toDataURL('image/png', quality || 1)
+        const _imgdata = await this.asyncLoadImage(_img)
+        // resolve(_img)
+        resolve(_imgdata);
+      } else {
+        resolve({
+          success: false,
+          msg: '---没有找到图像数据---'
+        });
+      }
+    })
+  }
+  // 判断图片是否有标注
+  detectIsMarked(imgObj) {
+    return new Promise(async resolve=>{
+      // console.log(imgObj)
+      if (!imgObj || !imgObj.data) {
+        console.log('---没有找到图像数据---')
+        resolve(false);
+      }
+      const _canvas = document.createElement('canvas');
+      _canvas.width = imgObj.width
+      _canvas.height = imgObj.height
+      const _canvasCtx = _canvas.getContext('2d')
+      _canvasCtx.drawImage(imgObj.data, 0, 0)
+      const _imgData = _canvasCtx.getImageData(0, 0, _canvas.width, _canvas.height)
+      // console.log(_imgData.data)
+      if (_imgData && _imgData.data) {
+        let _flag = false;
+        for (let i=0;i<_imgData.data.length;i++) {
+          // 不是alpha值也不是黑色, 表明有标注
+          if ((i+1)%4 !== 0 && _imgData.data[i] !== 0) {
+            // console.log(i)
+            _flag = true;
+            break;
+          }
+        }
+        resolve(_flag)
+      } else {
+        resolve(false)
+      }
+    })
+  }
   // 计算缩放后拖拉后的差值
   calcZoomedDragoffsetDeltaSize(zoomin=true){
     if (!this.bgObj) {
@@ -495,6 +591,7 @@ export default class sbBoard {
     }
     this.zoomSize = this.bgObj ? this.bgObj.scaled : 1;
   }
+  // 获取缩放倍数
   getZoomSize(){
     return {
       current: this.zoomSize,
