@@ -1163,11 +1163,11 @@ export default class sbBoard {
         }
       }
     }
-    if (e.button === 2 || (this.isHandMove && e.button === 0 && this.zoomSize !== this.bgObj.scaled)) {
+    if (e.button === 2) {
       if (this.detectIsDBClick(e.timeStamp)) {
         this.zoomReset()
       } else {
-        document.documentElement.style.cursor = this.isHandMove ? 'grabbing' : 'default'
+        document.documentElement.style.cursor = 'grabbing'
         if (!this.draging) {
           this.rightPressing = true;
           this.pencilPressing = true;
@@ -1401,13 +1401,33 @@ export default class sbBoard {
       }
       this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
     }
+    if (e.button === 2) {
+      if (this.detectIsDBClick(e.timeStamp)) {
+        this.zoomReset()
+      } else {
+        document.documentElement.style.cursor = 'grabbing'
+        if (!this.draging) {
+          this.rightPressing = true;
+          this.pencilPressing = true;
+          this.draging = true;
+          this.dragDownPoint = {
+            x: e.offsetX - this.dragOffset.x,
+            y: e.offsetY - this.dragOffset.y
+          }
+        }
+      }
+    }
   }
   polygonfillMoveFn(e, options) {
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
     }
-    
+    if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+      return;
+    }
     const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
     const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
     if (this.detectTwoPointClose(this.tmpPolygon, {x: _x, y: _y}, this.zoomSize)) {
@@ -1419,6 +1439,16 @@ export default class sbBoard {
     this.drawPolygon(false, true, options.gco)
   }
   polygonfillUpFn(e, options) {
+    if (this.rightPressing) {
+      this.rightPressing = false;
+    }
+    if (this.pencilPressing && this.draging) {
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+      this.draging = false;
+      this.pencilPressing = false;
+      return;
+    }
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
