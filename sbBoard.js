@@ -688,6 +688,9 @@ export default class sbBoard {
   setDrawType(params, publicUse=true, options={}) {
     if (publicUse) {
       this.selectedDraw = null;
+      this.tmpPolygon = null;
+      this.tmpPath2d = null;
+      this.tmpRect = null;
     }
     this.drawType = params;
     if (this.drawType!=='pointer'){
@@ -2383,8 +2386,6 @@ export default class sbBoard {
       this.selectedDraw = null;
       if (this.drawType !== 'pointer') {
         this.modifyRect = null;
-        this.tmpPolygon = null;
-        this.tmpRect = null;
         this.setDrawType('pointer')
         document.documentElement.style.cursor = 'default'
       }
