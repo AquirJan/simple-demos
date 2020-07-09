@@ -401,6 +401,20 @@ export default class sbBoard {
     //   this.adjustmentAddon(this.modifyRect, _gap)
     // }
   }
+  // 对比两图是否有改动
+  compareDiff(referenceB64, compareType="algorithm") {
+    return new Promise(async resolve => {
+      const _currentB64 = await this.exportPic({
+        type: compareType,
+        file: false
+      })
+      resolve({
+        reference: referenceB64,
+        current: _currentB64,
+        isDiff: _currentB64 !== referenceB64,
+      })
+    })
+  }
   // 加载图promise
   asyncLoadImage(src) {
     return new Promise((resolve) => {
@@ -2186,9 +2200,9 @@ export default class sbBoard {
       } else {
         this.zoomOut(0.020)
       }
+      e.preventDefault()
+      e.stopPropagation()
     }
-    e.preventDefault()
-    e.stopPropagation()
   }
   // 侦测被选中draw
   deleteSelectedDraw() {
