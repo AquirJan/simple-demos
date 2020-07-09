@@ -75,6 +75,8 @@ export default class sbBoard {
     this.specifyDrawId = null;
     this.windowResizeFn = null;
     this.windowResizeTimer = null;
+    this.sbDomKeydownFn = null;
+    this.sbDomKeyupFn = null;
     return this.init()
   }
   // 初始化
@@ -129,9 +131,13 @@ export default class sbBoard {
     
     this.setDrawType('pointer')
     
-    document.body.addEventListener('keydown', (e)=>this.sbDomKeydown(e), false)
-    document.body.addEventListener('keyup', (e)=>this.sbDomKeyup(e), false)
-    document.body.addEventListener('mouseout', (e)=>{
+    this.sbDomKeydownFn = (e)=>this.sbDomKeydown(e)
+    this.sbDomKeyupFn = (e)=>this.sbDomKeyup(e)
+
+    document.body.addEventListener('keydown', this.sbDomKeydownFn, false)
+    document.body.addEventListener('keyup', this.sbDomKeyupFn, false)
+    
+    this.sbDom.addEventListener('mouseout', (e)=>{
       document.documentElement.style.cursor = 'default'
     }, false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
@@ -250,6 +256,8 @@ export default class sbBoard {
     this.sbDom.remove()
     this.sbWrap.remove()
     window.removeEventListener('resize', this.windowResizeFn, false)
+    document.body.removeEventListener('keydown', this.sbDomKeydownFn, false)
+    document.body.removeEventListener('keyup', this.sbDomKeyupFn, false)
   }
   // 获取当前选中框框
   getSelectedDraw(){
@@ -1399,7 +1407,10 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
-    if (this.detectTwoPointClose(this.tmpPolygon, {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+    
+    const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
+    const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
+    if (this.detectTwoPointClose(this.tmpPolygon, {x: _x, y: _y}, this.zoomSize)) {
       document.documentElement.style.cursor = 'all-scroll'
     } else {
       document.documentElement.style.cursor = 'crosshair'
@@ -1412,11 +1423,13 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
+    const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
+    const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
     if (!this.tmpPolygon) {
       this.drawPolygon(false, false, options.gco)
     } else {
       if (this.tmpPolygon.ways.length > 1) {
-        if(this.detectTwoPointClose(this.tmpPolygon, {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+        if(this.detectTwoPointClose(this.tmpPolygon, {x:_x, y:_y}, this.zoomSize)) {
           this.setDrawType('pointer', false)
           this.tmpPolygon['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
           this.specifyDrawId = null;
@@ -1436,13 +1449,13 @@ export default class sbBoard {
             this.historyRecordHandler.recordChange(this.getAllDraws())
           }
         } else {
-          if (!this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+          if (!this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:_x, y:_y}, this.zoomSize)) {
             this.drawPolygon(false, false, options.gco)
           }
         }
         return;
       }
-      if (!this.tmpPolygon.ways.length || !this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:this.hoverPoint.x/this.zoomSize, y:this.hoverPoint.y/this.zoomSize}, this.zoomSize)) {
+      if (!this.tmpPolygon.ways.length || !this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:_x, y:_y}, this.zoomSize)) {
         this.drawPolygon(false, false, options.gco)
       }
     }
@@ -2193,7 +2206,7 @@ export default class sbBoard {
   // 滚动缩放
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
-    // console.log(this.ctrlKey, this.altKey)
+    // console.log(`this.ctrlKey: ${this.ctrlKey}, this.altKey: ${this.altKey}`)
     if ((this.ctrlKey || this.altKey) && Math.abs(_wheelDelta) > 0) {
       if (_wheelDelta > 0) {
         this.zoomIn(0.020)
@@ -2262,6 +2275,7 @@ export default class sbBoard {
   // 监听键盘按键释放
   sbDomKeyup(e) {
     const keycode = e.keyCode;
+    // console.log(`keyup: ${keycode}`)
     // if (keycode === 32){
     //   // 空格
     //   this.spaceBar = false;
@@ -2270,6 +2284,11 @@ export default class sbBoard {
     //   e.stopPropagation()
     //   return;
     // }
+    if (keycode === 9) {
+      // tab 当用户使用alt+tab或者ctrl+tab切换的时候会产生alt和ctrl键锁定
+      this.altKey = false;
+      this.ctrlKey = false;
+    }
     if ( keycode === 18 ) {
       // alt
       this.altKey = false;
@@ -2322,7 +2341,7 @@ export default class sbBoard {
       e.stopPropagation()
       return;
     }
-    if (keycode === 17 ) {
+    if (keycode === 17 || keycode === 91 ) {
       // ctrl || command 91
       this.ctrlKey = true;
       e.preventDefault()
@@ -2789,11 +2808,11 @@ export default class sbBoard {
     let _offsetX = this.bgObj ? this.bgObj.offsetX/zoomSize : 0
     let _offsetY = this.bgObj ? this.bgObj.offsetY/zoomSize : 0
     const _gapSzie = 5/zoomSize;
-
+    
     const _maxX = reference.x + _gapSzie + _offsetX
-    const _minX = reference.x - _gapSzie + _offsetX
+    const _minX = reference.x - (_gapSzie + _offsetX)
     const _maxY = reference.y + _gapSzie + _offsetY
-    const _minY = reference.y - _gapSzie + _offsetY
+    const _minY = reference.y - (_gapSzie + _offsetY)
     
     if (_maxX >= point.x && point.x >= _minX) {
       flagX = true;
