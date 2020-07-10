@@ -317,7 +317,7 @@ export default class sbBoard {
       src: ''
     }, obj)
     if (_obj.src) {
-      this.existBrushObj = await this.asyncLoadImage(_obj.src)
+      this.existBrushObj = await this.asyncLoadImage(_obj.src, false)
     } else {
       this.existBrushObj = obj
     }
@@ -328,7 +328,7 @@ export default class sbBoard {
       src: ''
     }, obj)
     if (_obj.src) {
-      this.existAlogrithmObj = await this.asyncLoadImage(_obj.src)
+      this.existAlogrithmObj = await this.asyncLoadImage(_obj.src, false)
       // console.log(this.existAlogrithmObj)
       // const detectResult = await this.detectIsMarked(this.existAlogrithmObj)
       // console.log(detectResult)
@@ -424,7 +424,7 @@ export default class sbBoard {
     })
   }
   // 加载图promise
-  asyncLoadImage(src) {
+  asyncLoadImage(src, calcScaled=true) {
     return new Promise((resolve) => {
       if (!src) {
         resolve({
@@ -435,20 +435,31 @@ export default class sbBoard {
       const image = new Image();
       image.src = src;
       image.onload = () => {
-        const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
-        resolve({
-          src,
-          success: true,
-          msg: 'load image complite',
-          data: image,
-          scaled,
-          offsetX, 
-          offsetY,
-          viewWidth: width,
-          viewHeight: height,
-          width: image.naturalWidth,
-          height: image.naturalHeight,
-        })
+        if (calcScaled) {
+          const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(image.naturalWidth, image.naturalHeight)
+          resolve({
+            src,
+            success: true,
+            msg: 'load image complite',
+            data: image,
+            scaled,
+            offsetX, 
+            offsetY,
+            viewWidth: width,
+            viewHeight: height,
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+          })
+        } else {
+          resolve({
+            src,
+            success: true,
+            msg: 'load image complite',
+            data: image,
+            width: image.naturalWidth,
+            height: image.naturalHeight,
+          })
+        }
       }
       image.onerror = () => {
         resolve({
@@ -531,7 +542,7 @@ export default class sbBoard {
         }
         _canvasCtx.putImageData(_imgData, 0, 0);
         const _img = _canvas.toDataURL('image/png', quality || 1)
-        const _imgdata = await this.asyncLoadImage(_img)
+        const _imgdata = await this.asyncLoadImage(_img, false)
         // resolve(_img)
         resolve(_imgdata);
       } else {
