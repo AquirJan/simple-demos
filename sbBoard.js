@@ -1433,14 +1433,14 @@ export default class sbBoard {
     }
   }
   polygonfillMoveFn(e, options) {
-    this.hoverPoint = {
-      x: e.offsetX,
-      y: e.offsetY,
-    }
     if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
       this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
       return;
+    }
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY,
     }
     const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
     const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
@@ -1556,10 +1556,31 @@ export default class sbBoard {
       let _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize
       this.tmpPath2d.moveTo(_x, _y)
     }
+    if (e.button === 2) {
+      if (this.detectIsDBClick(e.timeStamp)) {
+        this.zoomReset()
+      } else {
+        document.documentElement.style.cursor = 'grabbing'
+        if (!this.draging) {
+          this.rightPressing = true;
+          this.pencilPressing = true;
+          this.draging = true;
+          this.dragDownPoint = {
+            x: e.offsetX - this.dragOffset.x,
+            y: e.offsetY - this.dragOffset.y
+          }
+        }
+      }
+    }
   }
   brushMoveFn(e){
     // document.documentElement.style.cursor = 'crosshair'
     document.documentElement.style.cursor = 'none'
+    if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+      return;
+    }
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
@@ -1575,6 +1596,16 @@ export default class sbBoard {
   }
   brushUpFn(e){
     if (this.pencilPressing) {
+      if (this.rightPressing) {
+        this.rightPressing = false;
+      }
+      if (this.draging) {
+        this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+        this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+        this.draging = false;
+        this.pencilPressing = false;
+        return;
+      }
       this.hoverPoint = {
         x: e.offsetX,
         y: e.offsetY,
@@ -1609,10 +1640,31 @@ export default class sbBoard {
       this.tmpPath2d.moveTo((this.hoverPoint.x-this.dragOffset.x)/this.zoomSize, (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize)
       this.pencilPressing = true;
     }
+    if (e.button === 2) {
+      if (this.detectIsDBClick(e.timeStamp)) {
+        this.zoomReset()
+      } else {
+        document.documentElement.style.cursor = 'grabbing'
+        if (!this.draging) {
+          this.rightPressing = true;
+          this.pencilPressing = true;
+          this.draging = true;
+          this.dragDownPoint = {
+            x: e.offsetX - this.dragOffset.x,
+            y: e.offsetY - this.dragOffset.y
+          }
+        }
+      }
+    }
   }
   eraserMoveFn(e){
     // document.documentElement.style.cursor = 'crosshair'
     document.documentElement.style.cursor = 'none'
+    if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+      return;
+    }
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY
@@ -1626,6 +1678,16 @@ export default class sbBoard {
   }
   eraserUpFn(e){
     if (this.pencilPressing){
+      if (this.rightPressing) {
+        this.rightPressing = false;
+      }
+      if (this.draging) {
+        this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+        this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+        this.draging = false;
+        this.pencilPressing = false;
+        return;
+      }
       if (this.tmpPath2d) {
         this.originDraws.push({
           type: 'eraser',
