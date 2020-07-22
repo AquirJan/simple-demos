@@ -134,15 +134,12 @@ export default class sbBoard {
     this.sbDomKeydownFn = (e)=>this.sbDomKeydown(e)
     this.sbDomKeyupFn = (e)=>this.sbDomKeyup(e)
 
-    this.bindGlobalKeyboard()
+    document.body.addEventListener('keydown', this.sbDomKeydownFn, false)
+    document.body.addEventListener('keyup', this.sbDomKeyupFn, false)
     
-    // this.sbDom.addEventListener('mouseout', (e)=>{
-    //   document.documentElement.style.cursor = 'default'
-    //   this.revokeGlobalKeyboard()
-    // }, false)
-    // this.sbDom.addEventListener('mouseenter', (e)=>{
-    //   this.bindGlobalKeyboard()
-    // }, false)
+    this.sbDom.addEventListener('mouseout', (e)=>{
+      document.documentElement.style.cursor = 'default'
+    }, false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
     this.sbDom.oncontextmenu = (e)=>{
       e.preventDefault()
@@ -176,16 +173,6 @@ export default class sbBoard {
       }
     }, 30)
     
-  }
-  // 绑定键盘事件
-  bindGlobalKeyboard() {
-    document.body.addEventListener('keydown', this.sbDomKeydownFn, false)
-    document.body.addEventListener('keyup', this.sbDomKeyupFn, false)
-  }
-  // 解除绑定键盘事件
-  revokeGlobalKeyboard() {
-    document.body.removeEventListener('keydown', this.sbDomKeydownFn, false)
-    document.body.removeEventListener('keyup', this.sbDomKeyupFn, false)
   }
   // 设置光标位置
   setCursorPosition(x, y){
@@ -269,7 +256,8 @@ export default class sbBoard {
     this.sbDom.remove()
     this.sbWrap.remove()
     window.removeEventListener('resize', this.windowResizeFn, false)
-    this.revokeGlobalKeyboard()
+    document.body.removeEventListener('keydown', this.sbDomKeydownFn, false)
+    document.body.removeEventListener('keyup', this.sbDomKeyupFn, false)
   }
   // 获取当前选中框框
   getSelectedDraw(){
@@ -1153,6 +1141,9 @@ export default class sbBoard {
   }
   // 指针状态事件
   pointerDownFn(e){
+    if (this.isObserver) {
+      return;
+    }
     if (e.button === 0) {
       this.hoverPoint = {
         x: e.offsetX,
@@ -1178,15 +1169,13 @@ export default class sbBoard {
           }
           return;
         }
-        if (!this.isObserver) {
-          this.findOutFoucusDraw(e)
+        this.findOutFoucusDraw(e)
 
-          if (this.pencilPressing) {
-            return;
-          }
-          this.pencilPressing = true;
-          this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+        if (this.pencilPressing) {
+          return;
         }
+        this.pencilPressing = true;
+        this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
       }
     }
     if (e.button === 2) {
@@ -1205,14 +1194,12 @@ export default class sbBoard {
           return;
         }
         
-        if (!this.isObserver) {
-          this.findOutFoucusDraw(e)
-          if (this.pencilPressing) {
-            return;
-          }
-          this.pencilPressing = true;
-          this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+        this.findOutFoucusDraw(e)
+        if (this.pencilPressing) {
+          return;
         }
+        this.pencilPressing = true;
+        this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
       }
     }
   }
@@ -1227,11 +1214,12 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
+    if (this.isObserver) {
+      this.hoverDraw = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y)
+      return;
+    }
     if (!this.pencilPressing) {
-      if (this.isObserver) {
-        this.hoverDraw = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y)
-        return;
-      }
+      
       if (!this.pencilPosition) {
         if (!this.spaceBar) {
           document.documentElement.style.cursor = this.calcIsOnModifyRect(this.hoverPoint.x, this.hoverPoint.y) || this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y) ? 'move' : 'default'
@@ -1281,6 +1269,9 @@ export default class sbBoard {
     }
   }
   pointerUpFn(e){
+    if (this.isObserver) {
+      return;
+    }
     if (this.rightPressing) {
       this.rightPressing = false;
     }
@@ -1918,9 +1909,9 @@ export default class sbBoard {
     }
   }
   // 绘制标签
-  labelRect(rect, zoomSize=1, isObserver=false, ctx) {
+  labelRect(rect, zoomSize=1, ctx) {
     const _ctx = ctx ? ctx : this.sbCtx
-    if (rect.label && !isObserver) {
+    if (rect.label) {
       _ctx.fillStyle = rect.strokeStyle || this.options.pencilStyle.strokeStyle
       const _fontSize = 14;
       const _height = (_fontSize+4)/zoomSize;
@@ -2022,14 +2013,14 @@ export default class sbBoard {
             val.height
           );
           if (val.label){
-            this.labelRect(val, this.zoomSize, this.isObserver);
+            this.labelRect(val, this.zoomSize);
           }
         }
         break;
       case "polygon":
         ctx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
         if (val.label){
-          this.labelRect(val, this.zoomSize, this.isObserver);
+          this.labelRect(val, this.zoomSize);
         }
         ctx.beginPath();
         ctx.moveTo(val.x, val.y)
@@ -2263,7 +2254,7 @@ export default class sbBoard {
                 val.height
               );
               if (val.label){
-                this.labelRect(val, this.zoomSize, this.isObserver, _canvasCtx);
+                this.labelRect(val, this.zoomSize, _canvasCtx);
               }
               break;
             case "eraser":
@@ -2775,18 +2766,20 @@ export default class sbBoard {
           // 判断鼠标是否在label上
           if (_item.label) {
             const _tmpLabelRect = new Path2D()
-            const labelRect = this.labelRect(_item, this.zoomSize, this.isObserver)
-            _tmpLabelRect.rect(
-              labelRect.x,
-              labelRect.y,
-              labelRect.width,
-              labelRect.height
-            )
-            if(this.sbCtx.isPointInPath(_tmpLabelRect, x, y)){
-              _flag = {
-                data: _item,
-                index: i,
-                pointIn: 'label'
+            const labelRect = this.labelRect(_item, this.zoomSize)
+            if (labelRect) {
+              _tmpLabelRect.rect(
+                labelRect.x,
+                labelRect.y,
+                labelRect.width,
+                labelRect.height
+              )
+              if(this.sbCtx.isPointInPath(_tmpLabelRect, x, y)){
+                _flag = {
+                  data: _item,
+                  index: i,
+                  pointIn: 'label'
+                }
               }
             }
           }
