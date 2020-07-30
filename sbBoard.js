@@ -77,6 +77,8 @@ export default class sbBoard {
     this.windowResizeTimer = null;
     this.sbDomKeydownFn = null;
     this.sbDomKeyupFn = null;
+    this.tmpLeiLine = null; // 雷朋的雷人线条
+    this.leiLineKeyDownFn = null; // 雷朋的雷人线条按键监听方法
     return this.init()
   }
   // 初始化
@@ -136,13 +138,6 @@ export default class sbBoard {
 
     this.bindGlobalKeyboard()
     
-    // this.sbDom.addEventListener('mouseout', (e)=>{
-    //   document.documentElement.style.cursor = 'default'
-    //   this.revokeGlobalKeyboard()
-    // }, false)
-    // this.sbDom.addEventListener('mouseenter', (e)=>{
-    //   this.bindGlobalKeyboard()
-    // }, false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
     this.sbDom.oncontextmenu = (e)=>{
       e.preventDefault()
@@ -706,6 +701,33 @@ export default class sbBoard {
       return resolve(_img)
     })
   }
+  leiLineKeyDown(e) {
+    const keycode = e.keyCode
+    // esc
+    if (keycode === 27) {
+      if (this.tmpLeiLine && this.tmpLeiLine.ways && this.tmpLeiLine.ways.length) {
+        this.setDrawType('pointer', false)
+        this.tmpLeiLine['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
+        this.specifyDrawId = null;
+        this.pencilPosition = null;
+        this.detectDrawsIsOverSize()
+        this.tmpLeiLine['lineWidth'] = this.options.pencilStyle.lineWidth
+        this.tmpLeiLine['strokeStyle'] = this.options.pencilStyle.strokeStyle
+        this.originDraws.push(this.tmpLeiLine)
+        this.tmpLeiLine = null;
+        this.selectedDraw = cloneDeep({
+          data: this.originDraws[this.originDraws.length-1],
+          index: (this.originDraws.length-1)
+        })
+        // 记录操作
+        if (this.historyRecordHandler) {
+          this.historyRecordHandler.recordChange(this.getAllDraws())
+        }
+      }
+      document.body.removeEventListener('keydown', this.leiLineKeyDownFn, false)
+    }
+    return;
+  }
   // 工具栏用方法end
   // 设置画图类型
   setDrawType(params, publicUse=true, options={}) {
@@ -730,11 +752,17 @@ export default class sbBoard {
     if (this.pencilUpFn) {
       this.sbDom.removeEventListener('mouseup', this.pencilUpFn, false)
       this.sbDom.removeEventListener('mouseout', this.pencilUpFn, false)
-      this.pencilUpFn = null;
+      this.pencilUpFn = null; 
     }
     if (this.drawType !== 'pointer' && this.isObserver) {
       return false;
     }
+    // 雷人线用
+    if (this.drawType === 'leiLine') {
+      this.leiLineKeyDownFn = (e)=>this.leiLineKeyDown(e)
+      document.body.addEventListener('keydown', this.leiLineKeyDownFn, false)
+    }
+    // 各类型自动绑定事件
     if (this[`${this.drawType}DownFn`]) {
       if (options.id) {
         this.specifyDrawId = options.id
@@ -750,7 +778,7 @@ export default class sbBoard {
       this.pencilUpFn = (e)=>this[`${this.drawType}UpFn`](e, options)
       this.sbDom.addEventListener('mouseup', this.pencilUpFn, false)
       this.sbDom.addEventListener('mouseout', this.pencilUpFn, false)
-
+      // 更改鼠标样式，暂时只做了brush和eraser两个类型的自定义
       if (['brush', 'eraser'].includes(this.drawType)) {
         this.initCursor()
       } else {
@@ -1161,17 +1189,17 @@ export default class sbBoard {
         x: e.offsetX,
         y: e.offsetY
       }
-      if (this.ctrlKey) {
-        if (this.selectedDraw && !this.isObserver) {
-          let _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
-          if (this.selectedDraw.constructor === Array && _item) {
-            this.selectedDraw.push(cloneDeep(_item))
-          }
-          if (this.selectedDraw.constructor === Object && _item) {
-            this.selectedDraw = [this.selectedDraw, cloneDeep(_item)]
-          }
-        }
-      } else {
+      // if (this.ctrlKey) {
+      //   if (this.selectedDraw && !this.isObserver) {
+      //     let _item = this.calcIsOnDrawPath(this.hoverPoint.x, this.hoverPoint.y)
+      //     if (this.selectedDraw.constructor === Array && _item) {
+      //       this.selectedDraw.push(cloneDeep(_item))
+      //     }
+      //     if (this.selectedDraw.constructor === Object && _item) {
+      //       this.selectedDraw = [this.selectedDraw, cloneDeep(_item)]
+      //     }
+      //   }
+      // } else {
         if (this.spaceBar && !this.draging) {
           this.pencilPressing = true;
           this.draging = true;
@@ -1188,7 +1216,7 @@ export default class sbBoard {
         }
         this.pencilPressing = true;
         this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
-      }
+      // }
     }
     if (e.button === 2) {
       if (this.detectIsDBClick(e.timeStamp)) {
@@ -1421,6 +1449,66 @@ export default class sbBoard {
       }
     }}))
   }
+  // 雷人线事件
+  leiLineDownFn(e, options) {
+    if (e.button === 0) {
+      this.hoverPoint = {
+        x: e.offsetX,
+        y: e.offsetY
+      }
+      this.setPencilPosition(this.hoverPoint.x, this.hoverPoint.y)
+    }
+    if (e.button === 2) {
+      if (this.detectIsDBClick(e.timeStamp)) {
+        this.zoomReset()
+      } else {
+        document.documentElement.style.cursor = 'grabbing'
+        if (!this.draging) {
+          this.rightPressing = true;
+          this.pencilPressing = true;
+          this.draging = true;
+          this.dragDownPoint = {
+            x: e.offsetX - this.dragOffset.x,
+            y: e.offsetY - this.dragOffset.y
+          }
+        }
+      }
+    }
+  }
+  leiLineMoveFn(e, options) {
+    if ((this.spaceBar || this.rightPressing) && this.pencilPressing && this.draging) {
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+      return;
+    }
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY,
+    }
+    this.drawLeiLine(false, true, options.gco)
+  }
+  leiLineUpFn(e, options) {
+    if (this.rightPressing) {
+      this.rightPressing = false;
+    }
+    if (this.pencilPressing && this.draging) {
+      this.dragOffset['x'] = e.offsetX-this.dragDownPoint.x
+      this.dragOffset['y'] = e.offsetY-this.dragDownPoint.y
+      this.draging = false;
+      this.pencilPressing = false;
+      return;
+    }
+    this.hoverPoint = {
+      x: e.offsetX,
+      y: e.offsetY,
+    }
+    const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
+    const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
+    if (!this.detectTwoPointIsNearby(this.tmpLeiLine, {x: _x, y: _y}, this.zoomSize)) {
+      this.drawLeiLine(false, false, options.gco, options.cParams)
+    }
+    
+  }
   // 多边形填充事件
   polygonfillDownFn(e, options) {
     if (e.button === 0) {
@@ -1508,13 +1596,13 @@ export default class sbBoard {
             this.historyRecordHandler.recordChange(this.getAllDraws())
           }
         } else {
-          if (!this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:_x, y:_y}, this.zoomSize)) {
+          if (!this.detectTwoPointIsNearby(this.tmpPolygon, {x:_x, y:_y}, this.zoomSize)) {
             this.drawPolygon(false, false, options.gco)
           }
         }
         return;
       }
-      if (!this.tmpPolygon.ways.length || !this.detectTwoPointClose(this.tmpPolygon.ways[this.tmpPolygon.ways.length-1], {x:_x, y:_y}, this.zoomSize)) {
+      if (!this.tmpPolygon.ways.length || !this.detectTwoPointIsNearby(this.tmpPolygon, {x:_x, y:_y}, this.zoomSize)) {
         this.drawPolygon(false, false, options.gco)
       }
     }
@@ -1864,6 +1952,7 @@ export default class sbBoard {
           }
         ]
         break;
+      case "leiLine":
       case "polygon":
         this.controlDots = [
           {
@@ -1898,8 +1987,9 @@ export default class sbBoard {
     })
   }
   // 初始化画笔样式
-  setCtxStyle(ctx, stroke, size, fill) {
+  setCtxStyle(ctx, stroke, size, fill, lineJoin) {
     // this.sbCtx.setLineDash([]);
+    ctx.lineJoin = lineJoin !== undefined ? lineJoin : 'bevel'
     ctx.strokeStyle = stroke !== undefined ? stroke : this.options.pencilStyle.strokeStyle
     ctx.lineWidth = ( size !== undefined ? size : this.options.pencilStyle.lineWidth ) / this.zoomSize
     ctx.fillStyle = fill !== undefined ? fill : 'transparent'
@@ -2029,6 +2119,17 @@ export default class sbBoard {
           }
         }
         break;
+        // 雷人线
+      case "leiLine":
+        ctx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
+        ctx.beginPath();
+        ctx.moveTo(val.x, val.y)
+        val.ways.forEach(wval => {
+          ctx.lineTo(wval.x, wval.y)
+        })
+        this.setCtxStyle(ctx, val.strokeStyle, val.lineWidth)
+        ctx.stroke()
+        break;
       case "polygon":
         ctx.globalCompositeOperation = val.gco ? val.gco : 'source-over';
         if (val.label){
@@ -2137,7 +2238,21 @@ export default class sbBoard {
       this.setCtxStyle(this.sbCtx, this.tmpPolygon.strokeStyle, this.tmpPolygon.lineWidth)
       this.sbCtx.stroke()
     }
-    
+    // 临时雷人线
+    if(this.tmpLeiLine) {
+      this.sbCtx.beginPath()
+      this.sbCtx.moveTo(this.tmpLeiLine.x, this.tmpLeiLine.y)
+      this.tmpLeiLine.ways.forEach(val => {
+        this.sbCtx.lineTo(val.x, val.y)
+      })
+      const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
+      const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
+      this.sbCtx.lineTo(_x, _y)
+      
+      this.setCtxStyle(this.sbCtx, this.tmpLeiLine.strokeStyle, this.tmpLeiLine.lineWidth)
+      this.sbCtx.stroke()
+    }
+    // 已选中的Draw，加入可控制点
     if (this.selectedDraw) {
       if (this.selectedDraw.constructor === Object) {
         const item = this.originDraws[this.selectedDraw.index];
@@ -2179,8 +2294,8 @@ export default class sbBoard {
   exportPic(options) {
     this.setDrawType('pointer')
     const _options = Object.assign({}, {
-      type: 'origin', // draws, fusion, algorithm
-      quality:1,
+      type: 'origin', // draws, fusion, algorithm, leiLine-algorithm
+      quality: 1,
       // width: this.sbDom.width, 
       // height: this.sbDom.height, 
       file: {
@@ -2197,6 +2312,38 @@ export default class sbBoard {
       _canvas.width = _width
       _canvas.height = _height
       const _canvasCtx = _canvas.getContext('2d')
+      if (_options.type === 'leiLine-algorithm') {
+        _canvasCtx.globalCompositeOperation = "source-over";
+        _canvasCtx.fillStyle = '#000'
+        _canvasCtx.fillRect(0, 0, this.bgObj.width, this.bgObj.height)
+        
+        this.originDraws.forEach(val => {
+          switch (val.type) {
+            case "leiLine":
+              if (_options.leiLineDirection === val.cParams.direction) {
+                _canvasCtx.lineJoin = 'bevel';
+                _canvasCtx.lineWidth = val.lineWidth/this.zoomSize
+                _canvasCtx.strokeStyle = '#fff'
+                _canvasCtx.beginPath();
+                _canvasCtx.moveTo(val.x, val.y)
+                val.ways.forEach(wval => {
+                  _canvasCtx.lineTo(wval.x, wval.y)
+                })
+                _canvasCtx.stroke()
+              }
+              break;
+          }
+        });
+        
+        const _img = _canvas.toDataURL('image/png', _options.quality)
+      
+        if (_img) {
+          if (_options.file) {
+            return resolve(this.blobToFile(this.b64toBlob(_img), `leiLine_algorithm_${_options.leiLineDirection}.png`, _options.file.options))
+          }
+          return resolve(_img)
+        }
+      }
       if (_options.type === 'algorithm') {
         if (this.existAlogrithmObj && this.existAlogrithmObj.success) {
           _canvasCtx.drawImage(this.existAlogrithmObj.data, 0, 0)
@@ -2449,13 +2596,15 @@ export default class sbBoard {
   // 监听键盘按键按下
   sbDomKeydown(e) {
     const keycode = e.keyCode;
-    // console.log(keycode)
+    // console.log(`sbDomKeydown: ${keycode}`)
+    // alt
     if ( keycode === 18 ) {
       this.altKey = true;
       e.preventDefault()
       e.stopPropagation()
       return;
     }
+    // shift
     if ( keycode === 16 ) {
       this.shiftKey = true;
       e.preventDefault()
@@ -2633,103 +2782,107 @@ export default class sbBoard {
       return;
     }
     this.originDraws.forEach((oval, oindex) => {
-      if (oval.type === 'rect') {
-        // 右尽头
-        if ((oval.x+oval.width) > this.bgObj.width){
-          const _delta = Math.abs(this.bgObj.width-oval.width);
-          oval['x'] = _delta
-        }
-        // 下尽头
-        if ((oval.y + oval.height) > this.bgObj.height){
-          const _delta = Math.abs(this.bgObj.height-oval.height);
-          oval['y'] = _delta
-        }
-        // 上尽头
-        if (oval.x<0){
-          oval['x'] = 0
-        }
-        // 左尽头
-        if (oval.y<0){
-          oval['y'] = 0
-        }
-      } else if (oval.type === 'polygon') {
-        const _modifyRect = this.findOut4Poles(oval, true)
-        // 右尽头
-        if ((_modifyRect.x+_modifyRect.width) > this.bgObj.width){
-          const _delta = Math.abs(_modifyRect.x+_modifyRect.width-this.bgObj.width);
-          oval['x'] = oval['x']-_delta
-          oval.ways.forEach(wval => {
-            wval['x'] = wval['x']-_delta
-          })
-        }
-        // 下尽头
-        if ((_modifyRect.y + _modifyRect.height) > this.bgObj.height){
-          const _delta = Math.abs(_modifyRect.y + _modifyRect.height-this.bgObj.height);
-          oval['y'] = oval['y']-_delta
-          oval.ways.forEach(wval => {
-            wval['y'] = wval['y']-_delta
-          })
-        }
-        // 上尽头
-        if (_modifyRect.x < 0){
-          const _delta = Math.abs(_modifyRect.x);
-          oval['x'] = oval['x']+_delta
-          oval.ways.forEach(wval => {
-            wval['x'] = wval['x']+_delta
-          })
-        }
-        // 左尽头
-        if (_modifyRect.y < 0){
-          const _delta = Math.abs(_modifyRect.y);
-          oval['y'] = oval['y']+_delta
-          oval.ways.forEach(wval => {
-            wval['y'] = wval['y']+_delta
-          })
-        }
+      switch(oval.type) {
+        case "rect":
+          // 右尽头
+          if ((oval.x+oval.width) > this.bgObj.width){
+            const _delta = Math.abs(this.bgObj.width-oval.width);
+            oval['x'] = _delta
+          }
+          // 下尽头
+          if ((oval.y + oval.height) > this.bgObj.height){
+            const _delta = Math.abs(this.bgObj.height-oval.height);
+            oval['y'] = _delta
+          }
+          // 上尽头
+          if (oval.x<0){
+            oval['x'] = 0
+          }
+          // 左尽头
+          if (oval.y<0){
+            oval['y'] = 0
+          }
+          break;
+        case "polygon":
+        case "leiLine":
+          const _modifyRect = this.findOut4Poles(oval, true)
+          // 右尽头
+          if ((_modifyRect.x+_modifyRect.width) > this.bgObj.width){
+            const _delta = Math.abs(_modifyRect.x+_modifyRect.width-this.bgObj.width);
+            oval['x'] = oval['x']-_delta
+            oval.ways.forEach(wval => {
+              wval['x'] = wval['x']-_delta
+            })
+          }
+          // 下尽头
+          if ((_modifyRect.y + _modifyRect.height) > this.bgObj.height){
+            const _delta = Math.abs(_modifyRect.y + _modifyRect.height-this.bgObj.height);
+            oval['y'] = oval['y']-_delta
+            oval.ways.forEach(wval => {
+              wval['y'] = wval['y']-_delta
+            })
+          }
+          // 上尽头
+          if (_modifyRect.x < 0){
+            const _delta = Math.abs(_modifyRect.x);
+            oval['x'] = oval['x']+_delta
+            oval.ways.forEach(wval => {
+              wval['x'] = wval['x']+_delta
+            })
+          }
+          // 左尽头
+          if (_modifyRect.y < 0){
+            const _delta = Math.abs(_modifyRect.y);
+            oval['y'] = oval['y']+_delta
+            oval.ways.forEach(wval => {
+              wval['y'] = wval['y']+_delta
+            })
+          }
+          break;
       }
     })
     
     this.renewSelectedDraw()
   }
   // 计算画笔是否在某个画图上
-  calcIsOnDrawPath(x, y) {
-    let _flag = null;
-    for(let i=0;i<this.originDraws.length;i++) {
-      const _item = this.originDraws[i];
-      switch(_item.type) {
-        case "rect":
-          const _tmpRect = new Path2D()
-          _tmpRect.rect(
-            _item.x,
-            _item.y,
-            _item.width,
-            _item.height
-          )
-          if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
-            _flag = {
-              data: _item,
-              index: i,
-              pointIn: 'stroke'
-            }
-          }
-          break;
-        case "polygon":
-          const _svgPath2d = this.drawToSvgPath(_item)
-          if(this.sbCtx.isPointInStroke(_svgPath2d, x, y)){
-            _flag = {
-              data: _item,
-              index: i,
-              pointIn: 'stroke'
-            }
-          }
-          break;
-      }
-      if (_flag) {
-        break;
-      } 
-    }
-    return _flag;
-  }
+  // calcIsOnDrawPath(x, y) {
+  //   let _flag = null;
+  //   for(let i=0;i<this.originDraws.length;i++) {
+  //     const _item = this.originDraws[i];
+  //     switch(_item.type) {
+  //       case "rect":
+  //         const _tmpRect = new Path2D()
+  //         _tmpRect.rect(
+  //           _item.x,
+  //           _item.y,
+  //           _item.width,
+  //           _item.height
+  //         )
+  //         if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){
+  //           _flag = {
+  //             data: _item,
+  //             index: i,
+  //             pointIn: 'stroke'
+  //           }
+  //         }
+  //         break;
+  //       case "polygon":
+  //         const _svgPath2d = this.drawToSvgPath(_item)
+  //         if(this.sbCtx.isPointInStroke(_svgPath2d, x, y)){
+  //           _flag = {
+  //             data: _item,
+  //             index: i,
+  //             pointIn: 'stroke'
+  //           }
+  //         }
+  //         break;
+  //     }
+  //     if (_flag) {
+  //       break;
+  //     } 
+  //   }
+  //   return _flag;
+  // }
   // 文件转base64
   fileToBase64 (file){
     return new Promise((resolve, reject) => {
@@ -2811,10 +2964,19 @@ export default class sbBoard {
               }
             }
           }
-          
+          break;
+        case "leiLine":
+        case "polygon":
+          const _svgPath2d = this.drawToSvgPath(_item)
+          if(this.sbCtx.isPointInStroke(_svgPath2d, x, y)){
+            _flag = {
+              data: _item,
+              index: i,
+              pointIn: 'stroke'
+            }
+          }
           break;
       }
-      
       if (_flag) {
         break;
       }
@@ -2822,34 +2984,34 @@ export default class sbBoard {
     return _flag
   }
   // 计算画笔是否在已选中的画图上
-  calcIsInsideDraw(x, y) {
-    let _final = false;
-    if (this.selectedDraw) {
-      if (this.selectedDraw.constructor === Object) {
-        const _item = this.selectedDraw.data;
-        switch(_item.type) {
-          case "rect":
-            const _tmpRect = new Path2D()
-            _tmpRect.rect(
-              _item.x,
-              _item.y,
-              _item.width,
-              _item.height
-            )
-            _final = this.sbCtx.isPointInPath(_tmpRect, x, y)
-            break;
-          case "polygon":
-            const _svgPath2d = this.drawToSvgPath(_item)
-            _final = this.sbCtx.isPointInPath(_svgPath2d, x, y)
-            break;
-        }
-      }
-      if (this.selectedDraw.constructor === Array) {
+  // calcIsInsideDraw(x, y) {
+  //   let _final = false;
+  //   if (this.selectedDraw) {
+  //     if (this.selectedDraw.constructor === Object) {
+  //       const _item = this.selectedDraw.data;
+  //       switch(_item.type) {
+  //         case "rect":
+  //           const _tmpRect = new Path2D()
+  //           _tmpRect.rect(
+  //             _item.x,
+  //             _item.y,
+  //             _item.width,
+  //             _item.height
+  //           )
+  //           _final = this.sbCtx.isPointInPath(_tmpRect, x, y)
+  //           break;
+  //         case "polygon":
+  //           const _svgPath2d = this.drawToSvgPath(_item)
+  //           _final = this.sbCtx.isPointInPath(_svgPath2d, x, y)
+  //           break;
+  //       }
+  //     }
+  //     if (this.selectedDraw.constructor === Array) {
 
-      }
-    }
-    return _final;
-  }
+  //     }
+  //   }
+  //   return _final;
+  // }
   // canvas路径转svg路径
   drawToSvgPath(polygon){
     let _svg_path = [`M${polygon.x} ${polygon.y}`]
@@ -2918,8 +3080,8 @@ export default class sbBoard {
       return v.toString(16);
     });
   }
-  // 判断两点是否接近 
-  detectTwoPointClose(reference, point, zoomSize) {
+  // 检测相近点击的两点是否接近
+  detectTwoPointIsNearby(reference, point, zoomSize, gap=5) {
     let flagX = false;
     let flagY = false;
     
@@ -2928,7 +3090,43 @@ export default class sbBoard {
     }
     let _offsetX = this.bgObj ? this.bgObj.offsetX/zoomSize : 0
     let _offsetY = this.bgObj ? this.bgObj.offsetY/zoomSize : 0
-    const _gapSzie = 5/zoomSize;
+    const _gapSzie = gap/zoomSize;
+    let _referencePoint = {x: 0, y:0};
+    if (reference.ways && reference.ways.length) {
+      const _lastPoint = reference.ways[reference.ways.length-1]
+      _referencePoint = {x:_lastPoint.x, y:_lastPoint.y}
+    } else {
+      _referencePoint = {x:reference.x, y:reference.y}
+    }
+
+    const _maxX = _referencePoint.x + _gapSzie + _offsetX
+    const _minX = _referencePoint.x - (_gapSzie + _offsetX)
+    const _maxY = _referencePoint.y + _gapSzie + _offsetY
+    const _minY = _referencePoint.y - (_gapSzie + _offsetY)
+
+    if (_maxX >= point.x && point.x >= _minX) {
+      flagX = true;
+    }
+    if (_maxY >= point.y && point.y >= _minY) {
+      flagY = true;
+    }
+    if (flagX && flagY) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  // 判断开始和结束点是否接近 
+  detectTwoPointClose(reference, point, zoomSize, gap=5) {
+    let flagX = false;
+    let flagY = false;
+    
+    if (!point || !reference) {
+      return false;
+    }
+    let _offsetX = this.bgObj ? this.bgObj.offsetX/zoomSize : 0
+    let _offsetY = this.bgObj ? this.bgObj.offsetY/zoomSize : 0
+    const _gapSzie = gap/zoomSize;
     
     const _maxX = reference.x + _gapSzie + _offsetX
     const _minX = reference.x - (_gapSzie + _offsetX)
@@ -2947,8 +3145,36 @@ export default class sbBoard {
       return false;
     }
   }
+  // 绘画雷人线
+  drawLeiLine(closed=false, moving=false, gco="source-over", cParams={}) {
+    if (!this.pencilPosition) {
+      return
+    }
+    const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
+    const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
+
+    if (!this.tmpLeiLine) {
+      this.tmpLeiLine = {
+        x: _x,
+        y: _y,
+        ways: [],
+        gco: gco,
+        type: 'leiLine'
+      }
+      if (cParams) {
+        this.tmpLeiLine['cParams'] = cParams
+      }
+    } else {
+      if (!moving) {
+        this.tmpLeiLine['ways'].push({
+          x: _x,
+          y: _y,
+        })
+      }
+    }
+  }
   // 绘画多边形
-  drawPolygon(closed=false, moving=false, gco) {
+  drawPolygon(closed=false, moving=false, gco="source-over") {
     if (!this.pencilPosition) {
       return
     }
@@ -2974,7 +3200,7 @@ export default class sbBoard {
     this.tmpPolygon['closed'] = closed;
   }
   // 绘画矩形
-  drawRect(cx, cy, label, strokeStyle, zIndex=1, gco) {
+  drawRect(cx, cy, label, strokeStyle, zIndex=1, gco="source-over") {
     const _ds = this.getDeltaSize(cx, cy)
     const _x = (this.pencilPosition.x - this.dragOffset.x)/this.zoomSize
     const _y = (this.pencilPosition.y - this.dragOffset.y)/this.zoomSize
