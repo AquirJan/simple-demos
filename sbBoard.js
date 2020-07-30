@@ -134,12 +134,15 @@ export default class sbBoard {
     this.sbDomKeydownFn = (e)=>this.sbDomKeydown(e)
     this.sbDomKeyupFn = (e)=>this.sbDomKeyup(e)
 
-    document.body.addEventListener('keydown', this.sbDomKeydownFn, false)
-    document.body.addEventListener('keyup', this.sbDomKeyupFn, false)
+    this.bindGlobalKeyboard()
     
-    this.sbDom.addEventListener('mouseout', (e)=>{
-      document.documentElement.style.cursor = 'default'
-    }, false)
+    // this.sbDom.addEventListener('mouseout', (e)=>{
+    //   document.documentElement.style.cursor = 'default'
+    //   this.revokeGlobalKeyboard()
+    // }, false)
+    // this.sbDom.addEventListener('mouseenter', (e)=>{
+    //   this.bindGlobalKeyboard()
+    // }, false)
     this.sbDom.addEventListener('wheel', (e)=>this.sbDomWheel(e), false)
     this.sbDom.oncontextmenu = (e)=>{
       e.preventDefault()
@@ -173,6 +176,16 @@ export default class sbBoard {
       }
     }, 30)
     
+  }
+  // 绑定键盘事件
+  bindGlobalKeyboard() {
+    document.body.addEventListener('keydown', this.sbDomKeydownFn, false)
+    document.body.addEventListener('keyup', this.sbDomKeyupFn, false)
+  }
+  // 解除绑定键盘事件
+  revokeGlobalKeyboard() {
+    document.body.removeEventListener('keydown', this.sbDomKeydownFn, false)
+    document.body.removeEventListener('keyup', this.sbDomKeyupFn, false)
   }
   // 设置光标位置
   setCursorPosition(x, y){
@@ -256,8 +269,7 @@ export default class sbBoard {
     this.sbDom.remove()
     this.sbWrap.remove()
     window.removeEventListener('resize', this.windowResizeFn, false)
-    document.body.removeEventListener('keydown', this.sbDomKeydownFn, false)
-    document.body.removeEventListener('keyup', this.sbDomKeyupFn, false)
+    this.revokeGlobalKeyboard()
   }
   // 获取当前选中框框
   getSelectedDraw(){
