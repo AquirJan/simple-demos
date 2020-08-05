@@ -179,9 +179,9 @@
         <button id="rect">rect</button>
       </li> -->
       <!-- tyc矩形 -->
-      <!-- <li class="tools-list-item">
+      <li class="tools-list-item">
         <button id="tycrect">tycrect</button>
-      </li> -->
+      </li>
       <!-- clip截取部分 -->
       <li class="tools-list-item">
         <button id="clipsection">clipsection</button>
@@ -329,8 +329,9 @@
     bindEvent('tycrect', ()=>{
       console.log('tycrect')
       sbBoardIns.setDrawType('tycrect', true,  {
-        // label: 'fdkjf',
-        strokeStyle: 'red'
+        label: 'tycrect',
+        strokeStyle: 'red',
+        lineWidth: 3
       })
     })
     bindEvent('pointer', ()=>{
@@ -475,6 +476,7 @@
         resolve(true)
       })
     }
+    
     // const canvas = document.getElementById('canvas')
     // const image = new Image();
     // image.src = './pcb_demo.jpg';

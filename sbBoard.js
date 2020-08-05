@@ -440,6 +440,7 @@ export default class sbBoard {
         })
       }
       const image = new Image();
+      image.crossOrigin = 'Anonymous';
       image.src = src;
       image.onload = () => {
         if (calcScaled) {
