@@ -1486,7 +1486,7 @@ export default class sbBoard {
       x: e.offsetX,
       y: e.offsetY,
     }
-    this.drawLeiLine(false, true, options.gco)
+    this.drawLeiLine(false, true, options.gco, options.cParams)
   }
   leiLineUpFn(e, options) {
     if (this.rightPressing) {
