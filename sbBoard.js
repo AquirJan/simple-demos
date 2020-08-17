@@ -2340,7 +2340,7 @@ export default class sbBoard {
       
         if (_img) {
           if (_options.file) {
-            return resolve(this.blobToFile(this.b64toBlob(_img), `leiLine_algorithm_${_options.leiLineDirection}.png`, _options.file.options))
+            return resolve(this.blobToFile(this.b64toBlob(_img), `leiLine_algorithm_${_options.leiLineDirection}.${_options.file.options.type.replace(/.+\//gi, '')}`, _options.file.options))
           }
           return resolve(_img)
         }
