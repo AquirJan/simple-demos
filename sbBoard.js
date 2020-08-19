@@ -299,7 +299,7 @@ export default class sbBoard {
   // 设置背景图
   async setBackground(obj) {
     const _obj = Object.assign({
-      fillStyle: 'red',
+      fillStyle: 'white',
       src: ''
     }, obj)
     if (_obj.src) {
@@ -313,9 +313,21 @@ export default class sbBoard {
       }
     } else {
       this.bgObj = {
-        'fillStyle' : _obj.fillStyle
+        success: true,
+        fillStyle : _obj.fillStyle,
+        scaled: 1,
+        offsetX: 0,
+        offsetY: 0,
+        viewWidth: this.options.width,
+        viewHeight: this.options.height,
+        width: this.options.width,
+        height: this.options.height,
       }
-      this.zoomSize = 1;
+      this.dragOffset = {
+        x: this.bgObj.offsetX,
+        y: this.bgObj.offsetY,
+      }
+      this.zoomSize = this.bgObj.scaled;
     }
   }
   // 设置已有笔刷图
@@ -2014,7 +2026,8 @@ export default class sbBoard {
   // 绘制标签
   labelRect(rect, zoomSize=1, ctx) {
     const _ctx = ctx ? ctx : this.sbCtx
-    if (rect.label) {
+    let _finalText = rect.label.constructor === Array ? rect.label.join(',') : rect.label
+    if (_finalText) {
       _ctx.fillStyle = rect.strokeStyle || this.options.pencilStyle.strokeStyle
       const _fontSize = 14;
       const _height = (_fontSize+4)/zoomSize;
@@ -2030,16 +2043,16 @@ export default class sbBoard {
         _ctx.fillRect(_x, rect.y, _width, _height);
         _ctx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
         _ctx.fillStyle = "#fff"
-        _ctx.fillText(this.fittingString(_ctx, rect.label, _width-_paddingLeft), _fx, _y);
+        _ctx.fillText(this.fittingString(_ctx, _finalText, _width-_paddingLeft), _fx, _y);
       } else if (!rect.width) {
-        const _strWidth = _ctx.measureText(rect.label).width;
+        const _strWidth = _ctx.measureText(_finalText).width;
         _width = _strWidth+ 6/zoomSize
         _x = rect.x;
         const _fx = _x + _paddingLeft
         _ctx.fillRect(_x, rect.y, _width, _height);
         _ctx.font=`${_fontOriginSize}px ${this.options.fontFamily}`;
         _ctx.fillStyle = "#fff"
-        _ctx.fillText(rect.label, _fx, _y);
+        _ctx.fillText(_finalText, _fx, _y);
       }
       const _coordinate = {
         x: _x, 
@@ -2957,11 +2970,13 @@ export default class sbBoard {
               _item.width,
               _item.height
             )
-            if (this.sbCtx.isPointInPath(_tmpRect, x, y)){
+            // if(this.sbCtx.isPointInPath(_tmpRect, x, y)){ // 整个检测
+            if(this.sbCtx.isPointInStroke(_tmpRect, x, y)){ // 边缘检测
               _flag = {
                 data: _item,
                 index: i,
-                pointIn: 'inside'
+                // pointIn: 'inside'
+                pointIn: 'stroke'
               }
             }
           }
