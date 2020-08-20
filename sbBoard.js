@@ -2289,9 +2289,12 @@ export default class sbBoard {
   // 设置背景图
   renderBackground(ctx) {
     if (this.bgObj) {
+      ctx.globalCompositeOperation = "destination-over";
       if (this.bgObj.success && this.bgObj.data) {
-        ctx.globalCompositeOperation = "destination-over";
         ctx.drawImage(this.bgObj.data, 0, 0)
+      } else {
+        ctx.fillStyle = this.bgObj.fillStyle
+        ctx.fillRect(0, 0, this.bgObj.width, this.bgObj.height)
       }
     }
   }
@@ -2472,7 +2475,9 @@ export default class sbBoard {
         // 导出只有底图的图片
         if (this.bgObj) {
           _canvasCtx.globalCompositeOperation = "destination-over";
-          _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
+          if (this.bgObj.data) {
+            _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
+          }
         }
       }
       const _img = _canvas.toDataURL('image/png', _options.quality)
