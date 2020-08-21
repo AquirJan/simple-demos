@@ -969,8 +969,8 @@ export default class sbBoard {
       someOneRect['height'] = Math.abs(someOneRect.height)
 
       this.tmpRect = null;
-      const _minSize = 5/this.zoomSize;
-      if (someOneRect.width > _minSize && someOneRect.height > _minSize)  {
+      const _minSize = 20/this.zoomSize;
+      if ((someOneRect.width > _minSize || someOneRect.height > _minSize) && someOneRect.width <= this.bgObj.width && someOneRect.height <= this.bgObj.height)  {
         // 记录已经画的rects
         someOneRect['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
         this.specifyDrawId = null;
@@ -1422,6 +1422,7 @@ export default class sbBoard {
     }
     this.pencilPressing = false;
     let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle)
+    
     const _dx = someOneRect.x+someOneRect.width;
     if (someOneRect.x > _dx) {
       someOneRect.x = _dx
@@ -1433,8 +1434,8 @@ export default class sbBoard {
     someOneRect['width'] = Math.abs(someOneRect.width)
     someOneRect['height'] = Math.abs(someOneRect.height)
     
-    this.tmpRect = null;
-    if (someOneRect.width > 20 || someOneRect.height > 20)  {
+    const _minSize = 20/this.zoomSize;
+    if ((someOneRect.width > _minSize || someOneRect.height > _minSize) && someOneRect.width <= this.bgObj.width && someOneRect.height <= this.bgObj.height)  {
       // 记录已经画的rects
       someOneRect['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
       this.specifyDrawId = null;
@@ -1453,6 +1454,7 @@ export default class sbBoard {
     }
     this.setDrawType('pointer', false)
     this.pencilPosition = null;
+    this.tmpRect = null;
 
     this.sbDom.dispatchEvent(new CustomEvent('rectUp', { bubbles: true, detail: {
       draw: this.selectedDraw,
@@ -2477,11 +2479,13 @@ export default class sbBoard {
           _canvasCtx.globalCompositeOperation = "destination-over";
           if (this.bgObj.data) {
             _canvasCtx.drawImage(this.bgObj.data, 0, 0, _width, _height)
+          } else {
+            _canvasCtx.fillStyle = this.bgObj.fillStyle
+            _canvasCtx.fillRect(0, 0, this.bgObj.width, this.bgObj.height)
           }
         }
       }
       const _img = _canvas.toDataURL('image/png', _options.quality)
-      
       if (_img) {
         if (_options.file) {
           return resolve(this.blobToFile(this.b64toBlob(_img), _options.file.name, _options.file.options))
