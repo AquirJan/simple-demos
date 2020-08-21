@@ -1167,12 +1167,18 @@ export default class sbBoard {
               _item.y = _item.y + _item.height
               _item.height = Math.abs(_item.height)
             }
+            if (this.bgObj.height < _item.height) {
+              _item.height = this.bgObj.height
+            }
             break;
           case "lm":
           case "rm":
             if (_item.width < 0) {
               _item.x = _item.x + _item.width
               _item.width = Math.abs(_item.width)
+            }
+            if (this.bgObj.width < _item.width) {
+              _item.width = this.bgObj.width
             }
             break;
           case "tr":
@@ -1186,6 +1192,12 @@ export default class sbBoard {
             if (_item.height < 0) {
               _item.y = _item.y + _item.height
               _item.height = Math.abs(_item.height)
+            }
+            if (this.bgObj.height < _item.height) {
+              _item.height = this.bgObj.height
+            }
+            if (this.bgObj.width < _item.width) {
+              _item.width = this.bgObj.width
             }
             break;
         }
