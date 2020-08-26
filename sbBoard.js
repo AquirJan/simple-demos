@@ -452,7 +452,7 @@ export default class sbBoard {
         })
       }
       const image = new Image();
-      image.crossOrigin = 'Anonymous';
+      image.crossOrigin = 'Anonymous'; 
       image.src = src;
       image.onload = () => {
         if (calcScaled) {
@@ -723,9 +723,9 @@ export default class sbBoard {
         this.tmpLeiLine['id'] = this.specifyDrawId ? this.specifyDrawId : this.uuidv4Short()
         this.specifyDrawId = null;
         this.pencilPosition = null;
-        this.detectDrawsIsOverSize()
         this.tmpLeiLine['lineWidth'] = this.options.pencilStyle.lineWidth
         this.tmpLeiLine['strokeStyle'] = this.options.pencilStyle.strokeStyle
+        
         this.originDraws.push(this.tmpLeiLine)
         this.tmpLeiLine = null;
         this.selectedDraw = cloneDeep({
@@ -1531,7 +1531,9 @@ export default class sbBoard {
     }
     const _x = (this.hoverPoint.x-this.dragOffset.x)/this.zoomSize;
     const _y = (this.hoverPoint.y-this.dragOffset.y)/this.zoomSize;
-    if (!this.detectTwoPointIsNearby(this.tmpLeiLine, {x: _x, y: _y}, this.zoomSize)) {
+
+    const _isNear = this.detectTwoPointIsNearby(this.tmpLeiLine, {x: _x, y: _y}, this.zoomSize);
+    if (!_isNear) {
       this.drawLeiLine(false, false, options.gco, options.cParams)
     }
     
@@ -2814,8 +2816,9 @@ export default class sbBoard {
   // 侦测draw组是否超出底图范围
   detectDrawsIsOverSize() {
     if (!this.bgObj) {
-      return;
+      return false;
     }
+    let _flag = true;
     this.originDraws.forEach((oval, oindex) => {
       switch(oval.type) {
         case "rect":
@@ -2838,46 +2841,48 @@ export default class sbBoard {
             oval['y'] = 0
           }
           break;
-        case "polygon":
-        case "leiLine":
-          const _modifyRect = this.findOut4Poles(oval, true)
-          // 右尽头
-          if ((_modifyRect.x+_modifyRect.width) > this.bgObj.width){
-            const _delta = Math.abs(_modifyRect.x+_modifyRect.width-this.bgObj.width);
-            oval['x'] = oval['x']-_delta
-            oval.ways.forEach(wval => {
-              wval['x'] = wval['x']-_delta
-            })
-          }
-          // 下尽头
-          if ((_modifyRect.y + _modifyRect.height) > this.bgObj.height){
-            const _delta = Math.abs(_modifyRect.y + _modifyRect.height-this.bgObj.height);
-            oval['y'] = oval['y']-_delta
-            oval.ways.forEach(wval => {
-              wval['y'] = wval['y']-_delta
-            })
-          }
-          // 上尽头
-          if (_modifyRect.x < 0){
-            const _delta = Math.abs(_modifyRect.x);
-            oval['x'] = oval['x']+_delta
-            oval.ways.forEach(wval => {
-              wval['x'] = wval['x']+_delta
-            })
-          }
-          // 左尽头
-          if (_modifyRect.y < 0){
-            const _delta = Math.abs(_modifyRect.y);
-            oval['y'] = oval['y']+_delta
-            oval.ways.forEach(wval => {
-              wval['y'] = wval['y']+_delta
-            })
-          }
-          break;
+        // case "polygon":
+        // case "leiLine":
+        //   const _modifyRect = this.findOut4Poles(oval, true)
+        //   // 右尽头
+        //   if ((_modifyRect.x+_modifyRect.width) > this.bgObj.width){
+        //     const _delta = Math.abs(_modifyRect.x+_modifyRect.width-this.bgObj.width);
+        //     oval['x'] = oval['x']-_delta
+        //     oval.ways.forEach(wval => {
+        //       wval['x'] = wval['x']-_delta
+        //     })
+        //   }
+        //   // 下尽头
+        //   if ((_modifyRect.y + _modifyRect.height) > this.bgObj.height){
+        //     const _delta = Math.abs(_modifyRect.y + _modifyRect.height-this.bgObj.height);
+        //     oval['y'] = oval['y']-_delta
+        //     oval.ways.forEach(wval => {
+        //       wval['y'] = wval['y']-_delta
+        //     })
+        //   }
+        //   // 上尽头
+        //   if (_modifyRect.x < 0){
+        //     const _delta = Math.abs(_modifyRect.x);
+        //     oval['x'] = oval['x']+_delta
+        //     oval.ways.forEach(wval => {
+        //       wval['x'] = wval['x']+_delta
+        //     })
+        //   }
+        //   // 左尽头
+        //   if (_modifyRect.y < 0){
+        //     const _delta = Math.abs(_modifyRect.y);
+        //     oval['y'] = oval['y']+_delta
+        //     oval.ways.forEach(wval => {
+        //       wval['y'] = wval['y']+_delta
+        //     })
+        //   }
+        //   break;
       }
     })
-    
-    this.renewSelectedDraw()
+    if (_flag) {
+      this.renewSelectedDraw()
+    }
+    return _flag;
   }
   // 计算画笔是否在某个画图上
   // calcIsOnDrawPath(x, y) {
@@ -3125,8 +3130,8 @@ export default class sbBoard {
     if (!point || !reference) {
       return false;
     }
-    let _offsetX = this.bgObj ? this.bgObj.offsetX/zoomSize : 0
-    let _offsetY = this.bgObj ? this.bgObj.offsetY/zoomSize : 0
+    // let _offsetX = this.bgObj ? this.bgObj.offsetX/zoomSize : 0
+    // let _offsetY = this.bgObj ? this.bgObj.offsetY/zoomSize : 0
     const _gapSzie = gap/zoomSize;
     let _referencePoint = {x: 0, y:0};
     if (reference.ways && reference.ways.length) {
@@ -3135,12 +3140,10 @@ export default class sbBoard {
     } else {
       _referencePoint = {x:reference.x, y:reference.y}
     }
-
-    const _maxX = _referencePoint.x + _gapSzie + _offsetX
-    const _minX = _referencePoint.x - (_gapSzie + _offsetX)
-    const _maxY = _referencePoint.y + _gapSzie + _offsetY
-    const _minY = _referencePoint.y - (_gapSzie + _offsetY)
-
+    const _maxX = _referencePoint.x + _gapSzie 
+    const _minX = _referencePoint.x - _gapSzie
+    const _maxY = _referencePoint.y + _gapSzie 
+    const _minY = _referencePoint.y - _gapSzie
     if (_maxX >= point.x && point.x >= _minX) {
       flagX = true;
     }
