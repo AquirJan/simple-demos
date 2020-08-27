@@ -3,7 +3,10 @@ import cloneDeep from './lodash.clonedeep.js';
 export default class sbBoard {
   constructor(options) {
     this.options = Object.assign({
-      wrap: window,
+      wrap: {
+        innerHeight: 300,
+        innerWidth: 400
+      },
       // width: window.innerWidth,
       // height: window.innerHeight,
       style: {},
@@ -87,7 +90,10 @@ export default class sbBoard {
     if (this.options.wrap.innerWidth) {
       _wrapRect = {width: this.options.wrap.innerWidth, height: this.options.wrap.innerHeight}
     } else {
-      _wrapRect = this.options.wrap.getBoundingClientRect()
+      _wrapRect = {
+        width: this.options.wrap.clientWidth,
+        height: this.options.wrap.clientHeight,
+      }
     }
     if (!_wrapRect) {
       return console.error('options.wrap error')
