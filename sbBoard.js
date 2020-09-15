@@ -398,6 +398,29 @@ export default class sbBoard {
     }
     return modifyRect
   }
+  waitToBlob(canvas, type="image/jpeg", quality=0.95) {
+    return new Promise((resolve) => {
+      if (!canvas) {
+        resolve(false)
+      }
+      canvas.toBlob((blob)=>{
+        resolve(blob)
+      }, type, quality)
+    })
+  }
+  async exportBuffer(type="image/jpeg", quality=0.95, origin=true){
+    let _canvas = this.getCanvasDom()
+    if (origin && this.bgObj) {
+      _canvas = document.createElement('canvas');
+      _canvas.width = this.bgObj.width
+      _canvas.height = this.bgObj.height
+      const _canvasCtx = _canvas.getContext('2d')
+      _canvasCtx.drawImage(this.bgObj.data, 0, 0)
+    }
+    const blob = await this.waitToBlob(_canvas, type, quality)
+    const buff = await blob.arrayBuffer()
+    return buff
+  }
   // 框框外部调整控制器
   drawOutsideAddon(){
     const _selectedIndex = this.selectedDraw.map(val=>val.index);
