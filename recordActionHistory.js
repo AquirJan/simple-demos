@@ -13,8 +13,8 @@ export default class recordActionHistory {
   // 后退
   revoke() {
     this.revokedStep = this.revokedStep + 1;
-    if (this.revokedStep >= this.historyActionArray.length){
-      this.revokedStep = this.historyActionArray.length-1
+    if (this.revokedStep >= this.historyActionArray.length) {
+      this.revokedStep = this.historyActionArray.length - 1
       return null;
     }
     this.showoffHistoryArray.shift()
@@ -23,7 +23,7 @@ export default class recordActionHistory {
   // 前进
   onward() {
     this.revokedStep = this.revokedStep - 1;
-    if (this.revokedStep < 0){
+    if (this.revokedStep < 0) {
       this.revokedStep = 0
       return null;
     }
@@ -54,7 +54,7 @@ export default class recordActionHistory {
   recordChange(data) {
     this.historyActionArray.splice(this.revokedStep, 0, cloneDeep(data))
     if (this.revokedStep !== 0) {
-      this.historyActionArray = this.historyActionArray.slice(-(this.historyActionArray.length-this.revokedStep))
+      this.historyActionArray = this.historyActionArray.slice(-(this.historyActionArray.length - this.revokedStep))
       this.revokedStep = 0;
     }
     this.showoffHistoryArray = cloneDeep(this.historyActionArray)
