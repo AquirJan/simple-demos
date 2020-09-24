@@ -907,13 +907,17 @@ export default class sbBoard {
         );
       }
     } else if (e.button === 2) {
-      document.documentElement.style.cursor = 'grabbing';
-      this.pencilPressing = true;
-      this.draging = true;
-      this.dragDownPoint = {
-        x: e.offsetX - this.dragOffset.x,
-        y: e.offsetY - this.dragOffset.y
-      };
+      if (this.detectIsDBClick(e.timeStamp)) {
+        this.zoomReset();
+      } else {
+        document.documentElement.style.cursor = 'grabbing';
+        this.pencilPressing = true;
+        this.draging = true;
+        this.dragDownPoint = {
+          x: e.offsetX - this.dragOffset.x,
+          y: e.offsetY - this.dragOffset.y
+        };
+      }
     }
   }
   tycrectMoveFn(e, options) {
