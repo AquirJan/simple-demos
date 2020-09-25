@@ -175,7 +175,7 @@ export default class sbBoard {
     resizeObserver.observe(this.sbWrap);
   }
   async windowResize(e) {
-    if (!this.resizing && this.bgObj && this.bgObj.data) {
+    if (!this.resizing) {
       this.resizing = true;
       this.sbDom.width = 0;
       this.sbDom.height = 0;
@@ -184,20 +184,34 @@ export default class sbBoard {
       this.options['height'] = _wrapRect.clientHeight;
       this.sbDom.width = this.options.width;
       this.sbDom.height = this.options.height;
-      const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(this.bgObj.data.naturalWidth, this.bgObj.data.naturalHeight);
-      const _bgObj = {
-        src: this.bgObj.src,
+      let _bgObj = {
         success: true,
-        msg: 'load image complite',
-        data: this.bgObj.data,
-        scaled,
-        offsetX,
-        offsetY,
-        viewWidth: width,
-        viewHeight: height,
-        width: this.bgObj.data.naturalWidth,
-        height: this.bgObj.data.naturalHeight
+        fillStyle: this.bgObj && this.bgObj.fillStyle ? this.bgObj.fillStyle : '#666',
+        scaled: 1,
+        offsetX: 0,
+        offsetY: 0,
+        viewWidth: _wrapRect.clientWidth,
+        viewHeight: _wrapRect.clientHeight,
+        width: _wrapRect.clientWidth,
+        height: _wrapRect.clientHeight
+      };
+      if (this.bgObj && this.bgObj.data) {
+        const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(this.bgObj.data.naturalWidth, this.bgObj.data.naturalHeight);
+        _bgObj = {
+          src: this.bgObj.src,
+          success: true,
+          msg: 'load image complite',
+          data: this.bgObj.data,
+          scaled,
+          offsetX,
+          offsetY,
+          viewWidth: width,
+          viewHeight: height,
+          width: this.bgObj.data.naturalWidth,
+          height: this.bgObj.data.naturalHeight
+        }
       }
+      
       this.bgObj = _bgObj;
       this.zoomSize = this.bgObj.scaled;
       this.dragOffset = {
