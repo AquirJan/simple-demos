@@ -80,7 +80,7 @@ export default class sbBoard {
     this.cursorDraw = null;
     this.specifyDrawId = null;
     this.windowResizeFn = null;
-    this.windowResizeTimer = null;
+    this.resizing = false;
     this.sbDomKeydownFn = null;
     this.sbDomKeyupFn = null;
     this.tmpLeiLine = null; // 雷朋的雷人线条
@@ -112,7 +112,7 @@ export default class sbBoard {
       width: '100%',
       height: '100%',
       position: 'relative',
-      display: 'flex',
+      display: 'grid',
       'align-items': 'center',
       'justify-content': 'center'
     };
@@ -160,29 +160,52 @@ export default class sbBoard {
     window.addEventListener('resize', this.windowResizeFn, false);
 
     this.renderBoard();
+
+    this.wrapSizeObserver();
     return this;
   }
-  windowResize(e) {
-    if (this.windowResizeTimer) {
-      clearTimeout(this.windowResizeTimer);
+  wrapSizeObserver() {
+    if (!this.sbWrap) {
+      console.error('没有sbWrap')
+      return;
     }
-    this.windowResizeTimer = setTimeout(async () => {
-      let _wrapRect = null;
+    const resizeObserver = new ResizeObserver(async entries => {
+      this.windowResize()
+    });
+    resizeObserver.observe(this.sbWrap);
+  }
+  async windowResize(e) {
+    if (!this.resizing && this.bgObj && this.bgObj.data) {
+      this.resizing = true;
       this.sbDom.width = 0;
       this.sbDom.height = 0;
-      _wrapRect = this.options.wrap.getBoundingClientRect();
-      if (!_wrapRect) {
-        return console.error('options.wrap error');
-      }
-      this.options['width'] = _wrapRect.width;
-      this.options['height'] = _wrapRect.height;
+      const _wrapRect = this.sbWrap;
+      this.options['width'] = _wrapRect.clientWidth;
+      this.options['height'] = _wrapRect.clientHeight;
       this.sbDom.width = this.options.width;
       this.sbDom.height = this.options.height;
-      if (this.bgObj && this.bgObj.src) {
-        const _b64 = await this.imageToBase64(this.bgObj);
-        this.setBackground({ src: _b64 });
+      const { height, width, scaled, offsetX, offsetY } = this.calcImageSize(this.bgObj.data.naturalWidth, this.bgObj.data.naturalHeight);
+      const _bgObj = {
+        src: this.bgObj.src,
+        success: true,
+        msg: 'load image complite',
+        data: this.bgObj.data,
+        scaled,
+        offsetX,
+        offsetY,
+        viewWidth: width,
+        viewHeight: height,
+        width: this.bgObj.data.naturalWidth,
+        height: this.bgObj.data.naturalHeight
       }
-    }, 30);
+      this.bgObj = _bgObj;
+      this.zoomSize = this.bgObj.scaled;
+      this.dragOffset = {
+        x: this.bgObj.offsetX,
+        y: this.bgObj.offsetY
+      };
+      this.resizing = false;
+    }
   }
   // 绑定键盘事件
   bindGlobalKeyboard() {
@@ -307,41 +330,44 @@ export default class sbBoard {
     }
   }
   // 设置背景图
-  async setBackground(obj) {
-    const _obj = Object.assign(
-      {
-        fillStyle: 'white',
-        src: ''
-      },
-      obj
-    );
-    if (_obj.src) {
-      this.bgObj = await this.asyncLoadImage(_obj.src);
-      if (this.bgObj.success) {
-        this.zoomSize = this.bgObj.scaled;
+  setBackground(obj) {
+    return new Promise(async resolve => {
+      const _obj = Object.assign(
+        {
+          fillStyle: 'white',
+          src: ''
+        },
+        obj
+      );
+      if (_obj.src) {
+        this.bgObj = await this.asyncLoadImage(_obj.src);
+        if (this.bgObj.success) {
+          this.zoomSize = this.bgObj.scaled;
+          this.dragOffset = {
+            x: this.bgObj.offsetX,
+            y: this.bgObj.offsetY
+          };
+        }
+      } else {
+        this.bgObj = {
+          success: true,
+          fillStyle: _obj.fillStyle,
+          scaled: 1,
+          offsetX: 0,
+          offsetY: 0,
+          viewWidth: this.options.width,
+          viewHeight: this.options.height,
+          width: this.options.width,
+          height: this.options.height
+        };
         this.dragOffset = {
           x: this.bgObj.offsetX,
           y: this.bgObj.offsetY
         };
+        this.zoomSize = this.bgObj.scaled;
       }
-    } else {
-      this.bgObj = {
-        success: true,
-        fillStyle: _obj.fillStyle,
-        scaled: 1,
-        offsetX: 0,
-        offsetY: 0,
-        viewWidth: this.options.width,
-        viewHeight: this.options.height,
-        width: this.options.width,
-        height: this.options.height
-      };
-      this.dragOffset = {
-        x: this.bgObj.offsetX,
-        y: this.bgObj.offsetY
-      };
-      this.zoomSize = this.bgObj.scaled;
-    }
+      resolve(this.bgObj);
+    })
   }
   // 设置已有笔刷图
   async setExistBrushPic(obj) {
@@ -3156,6 +3182,8 @@ export default class sbBoard {
       return false;
     }
   }
+  
+  
   // 产生短id
   uuidv4Short() {
     return 'xxxx-4xxxyx'.replace(/[xy]/g, function(c) {
