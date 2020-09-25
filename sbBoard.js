@@ -8,8 +8,6 @@ export default class sbBoard {
           innerHeight: 300,
           innerWidth: 400
         },
-        // width: window.innerWidth,
-        // height: window.innerHeight,
         style: {},
         wrapStyle: {},
         drawHistory: [],
@@ -186,7 +184,7 @@ export default class sbBoard {
       this.sbDom.height = this.options.height;
       let _bgObj = {
         success: true,
-        fillStyle: this.bgObj && this.bgObj.fillStyle ? this.bgObj.fillStyle : '#666',
+        fillStyle: this.bgObj && this.bgObj.fillStyle ? this.bgObj.fillStyle : 'transparent',
         scaled: 1,
         offsetX: 0,
         offsetY: 0,
@@ -348,7 +346,7 @@ export default class sbBoard {
     return new Promise(async resolve => {
       const _obj = Object.assign(
         {
-          fillStyle: 'white',
+          fillStyle: 'transparent',
           src: ''
         },
         obj
