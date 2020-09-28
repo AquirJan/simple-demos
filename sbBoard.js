@@ -3186,19 +3186,28 @@ export default class sbBoard {
       scaled: 1,
     }
     if (width && height) {
-      _obj.width = Math.round(width * (this.sbDom.height / height))
-      if (_obj.width > this.sbDom.width) {
-        _obj.width = this.sbDom.width
-        _obj.height = Math.round(height * (this.sbDom.width / width))
-        _obj.offsetX = 0;
-        _obj.offsetY = this.normalFloat(((this.sbDom.height - _obj.height) / 2))
-        _obj.scaled = this.normalFloat((this.sbDom.width / width), 3);
-      } else {
-        _obj.height = this.sbDom.height
-        _obj.offsetY = 0;
+      if (this.sbDom.width > width && this.sbDom.height > height) {
+        _obj.width = width
+        _obj.height = height
         _obj.offsetX = this.normalFloat(((this.sbDom.width - _obj.width) / 2))
-        _obj.scaled = this.normalFloat((this.sbDom.height / height), 3);
+        _obj.offsetY = this.normalFloat(((this.sbDom.height - _obj.height) / 2))
+        _obj.scaled = 1;
+      } else {
+        _obj.width = Math.round(width * (this.sbDom.height / height))
+        if (_obj.width > this.sbDom.width) {
+          _obj.width = this.sbDom.width
+          _obj.height = Math.round(height * (this.sbDom.width / width))
+          _obj.offsetX = 0;
+          _obj.offsetY = this.normalFloat(((this.sbDom.height - _obj.height) / 2))
+          _obj.scaled = this.normalFloat((this.sbDom.width / width), 3);
+        } else {
+          _obj.height = this.sbDom.height
+          _obj.offsetY = 0;
+          _obj.offsetX = this.normalFloat(((this.sbDom.width - _obj.width) / 2))
+          _obj.scaled = this.normalFloat((this.sbDom.height / height), 3);
+        }
       }
+      
     }
     return _obj
   }
