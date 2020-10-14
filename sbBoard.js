@@ -590,7 +590,7 @@ export default class sbBoard {
     return parseFloat(floatNumber.toFixed(fixed))
   }
   // 计算当前缩放尺寸
-  calcCurrentZoomSize(size, plus = true, step = 0.010, min = 0.15, max = 1) {
+  calcCurrentZoomSize(size, plus = true, step = 0.010, min = 0.15, max = 1.5) {
     if (isNaN(size)) {
       console.warn('size param is not a number')
       return null;
@@ -843,6 +843,7 @@ export default class sbBoard {
     if (this.drawType !== 'pointer' && this.isObserver) {
       return false;
     }
+    console.log('bind event')
     // 雷人线用
     if (this.drawType === 'leiLine') {
       this.leiLineKeyDownFn = (e) => this.leiLineKeyDown(e)
@@ -1292,10 +1293,10 @@ export default class sbBoard {
   }
   // 指针状态事件
   pointerDownFn(e) {
-    if (this.isObserver) {
-      return;
-    }
     if (e.button === 0) {
+      if (this.isObserver) {
+        return;
+      }
       this.hoverPoint = {
         x: e.offsetX,
         y: e.offsetY
@@ -1426,26 +1427,18 @@ export default class sbBoard {
     }
   }
   pointerUpFn(e) {
-    if (this.isObserver) {
-      // this.sbDom.dispatchEvent(new CustomEvent('pointerUp', { bubbles: true, detail: {
-      //   draw: this.selectedDraw,
-      //   point: {
-      //     x: e.clientX,
-      //     y: e.clientY,
-      //   }
-      // }}))
-      return;
-    }
     if (this.rightPressing) {
       this.rightPressing = false;
     }
     if (this.pencilPressing && this.draging) {
+      document.documentElement.style.cursor = 'default'
       this.dragOffset['x'] = e.offsetX - this.dragDownPoint.x
       this.dragOffset['y'] = e.offsetY - this.dragDownPoint.y
       this.draging = false;
       this.pencilPressing = false;
       return;
     }
+    
     this.hoverPoint = {
       x: e.offsetX,
       y: e.offsetY,
@@ -2160,9 +2153,12 @@ export default class sbBoard {
       if (rect.width) {
         // _width = rect.width < 50 / zoomSize ? rect.width : rect.width / 2
         // _x = rect.width < 50 / zoomSize ? rect.x : rect.x + _width // 左上角
-        const fontWidth = _ctx.measureText(_finalText).width + 6 / zoomSize
-        _width = rect.width < fontWidth ? rect.width : fontWidth
-        _x = rect.width < fontWidth ? rect.x : rect.x + rect.width - fontWidth // 右上角
+
+        const fontWidth = _ctx.measureText(_finalText).width + 6 / zoomSize // 文字的宽度
+        const width_array = [fontWidth, 120 / zoomSize, rect.width / 2]
+        _width = Math.min(...width_array)
+        _x = rect.x + rect.width - _width
+
         const _fx = _x + _paddingLeft
         _ctx.fillRect(_x, rect.y, _width, _height);
         _ctx.font = `${_fontOriginSize}px ${this.options.fontFamily}`;
@@ -2621,7 +2617,6 @@ export default class sbBoard {
   // 滚动缩放
   sbDomWheel(e) {
     const _wheelDelta = e.wheelDelta;
-    // console.log(`this.ctrlKey: ${this.ctrlKey}, this.altKey: ${this.altKey}`)
     if ((this.ctrlKey || this.altKey) && Math.abs(_wheelDelta) > 0) {
       if (_wheelDelta > 0) {
         this.zoomIn(0.020)
