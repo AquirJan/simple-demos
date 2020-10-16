@@ -149,13 +149,13 @@
         <button id="pcbSmall">pcbSmall</button>
       </li> -->
       <!-- 前进 -->
-      <!-- <li class="tools-list-item">
+      <li class="tools-list-item">
         <button id="onward">onward</button>
-      </li> -->
+      </li>
       <!-- 后退 -->
-      <!-- <li class="tools-list-item">
+      <li class="tools-list-item">
         <button id="revoke" >revoke</button>
-      </li> -->
+      </li>
       <!-- 圆形 -->
       <!-- <li class="tools-list-item">
         <button id="circle">circle</button>
@@ -213,6 +213,10 @@
   <script type="module">
     // new mousePosition()
     import sbBoard from './sbBoard.js'
+    import usbCamera from './usbCamera.js'
+
+    const usbCameraIns = new usbCamera()
+    console.dir(usbCameraIns)
     
     let _historyRecordHandler = null;
     const initData = [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":"adsfb"}]
@@ -254,13 +258,13 @@
     //   brushSize: 80
     // })
     // sbBoardIns.setDrawsData([{"x":2257,"y":1857,"ways":[{"x":2245,"y":1262},{"x":2536,"y":1274},{"x":2346,"y":1835}],"type":"polygon","closed":true,"id":"2de0-422e9f"},{"x":2819,"y":1224,"ways":[{"x":2819,"y":1224},{"x":3177,"y":1266},{"x":3046,"y":1532},{"x":2751,"y":1384}],"type":"polygon","closed":true,"id":"cc83-402782"},{"x":2278,"y":2781,"ways":[{"x":2278,"y":2781},{"x":2806,"y":2629},{"x":2388,"y":2165}],"type":"polygon","closed":true,"id":"bc23-4224a4"},{"x":1793,"y":1515,"ways":[{"x":1835,"y":1726},{"x":1996,"y":1713},{"x":2118,"y":1591},{"x":2084,"y":1430},{"x":1810,"y":1430}],"type":"polygon","closed":true,"id":"6dc5-4779bc"},{"x":3376,"y":2262,"ways":[{"x":3527,"y":2291},{"x":3456,"y":2397},{"x":3350,"y":2308}],"type":"polygon","closed":true,"id":"2649-4415b2"}])
-    sbBoardIns.setBackground({
-      fillStyle: '#000'
-    })
-    // sbBoardIns.setBackground({src:'./5mpic.jpg'})
+    // sbBoardIns.setBackground({
+    //   fillStyle: '#000'
+    // })
+    sbBoardIns.setBackground({src:'./42.jpg'})
     // sbBoardIns.setExistBrushPic({src:'./pcb_brush.png'})
     // sbBoardIns.setExistAlgorithmPic({src:'./pcb_algorithm.png'})
-    // sbBoardIns.setObserverMode(true);
+    sbBoardIns.setObserverMode();
     workbenchDom.appendChild(sbBoardIns.getWrapDom())
     // document.body.appendChild(sbBoardIns.getWrapDom())
     
@@ -331,7 +335,7 @@
     bindEvent('tycrect', ()=>{
       console.log('tycrect')
       sbBoardIns.setDrawType('tycrect', true,  {
-        label: 'tycrect',
+        label: 'tycrectakjsdflkjasdkjflkajsdlkfjalikejfilasjdlkfdjflkajsdfljiejflsakdjflkasjdflkasjdf',
         strokeStyle: 'red',
         lineWidth: 3
       })
@@ -478,7 +482,26 @@
         resolve(true)
       })
     }
-    
+    function sortArrayObject() {
+      const _array = [
+        {camIndex:1},
+        {camIndex:33},
+        {camIndex:32},
+        {camIndex:0},
+      ]
+      const _tarray = _array.sort((a, b)=>{
+        const _aIndex = a.camIndex
+        const _bIndex = b.camIndex
+        if (_aIndex < _bIndex) {
+          return -1;
+        } else if (_aIndex > _bIndex) {
+          return 1;
+        } else {
+          return 0
+        }
+      })
+      console.log(_tarray)
+    }
     // const canvas = document.getElementById('canvas')
     // const image = new Image();
     // image.src = './pcb_demo.jpg';
