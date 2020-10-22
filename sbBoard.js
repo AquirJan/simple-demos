@@ -764,7 +764,7 @@ export default class sbBoard {
 
   }
   // 切割图片部分区域
-  clipImgSection(coordinate) {
+  clipImgSection(coordinate, uint8array = false) {
     return new Promise(resolve => {
       const _canvas = document.createElement('canvas');
       _canvas.width = coordinate.width
@@ -772,6 +772,10 @@ export default class sbBoard {
       const _canvasCtx = _canvas.getContext('2d')
       _canvasCtx.drawImage(this.bgObj.data, coordinate.x, coordinate.y, coordinate.width, coordinate.height, 0, 0, this.bgObj.width, this.bgObj.height)
       const _img = _canvas.toDataURL('image/png', coordinate.quality || 1)
+      if (uint8array) {
+        const _u8a = this.b64toUint8Array(_img)
+        return resolve(_u8a)
+      }
       return resolve(_img)
     })
   }
@@ -843,7 +847,6 @@ export default class sbBoard {
     if (this.drawType !== 'pointer' && this.isObserver) {
       return false;
     }
-    console.log('bind event')
     // 雷人线用
     if (this.drawType === 'leiLine') {
       this.leiLineKeyDownFn = (e) => this.leiLineKeyDown(e)
@@ -2133,6 +2136,9 @@ export default class sbBoard {
   setDrawsData(data, record = true) {
     this.selectedDraw = null;
     this.originDraws = data;
+    if (this.bgObj && this.bgObj.data) {
+      this.detectDrawsIsOverSize()
+    }
     if (record && this.historyRecordHandler) {
       this.historyRecordHandler.recordChange(this.getAllDraws())
     }
@@ -3053,6 +3059,12 @@ export default class sbBoard {
       ia[i] = byteString.charCodeAt(i);
     }
     return new Blob([ab], { type: 'image/png' });
+  }
+  // base64 to Uint8Array数据
+  b64toUint8Array(base64Data) {
+    let byteString = atob(base64Data.split(',')[1]);
+    let ab = new ArrayBuffer(byteString.length);
+    return new Uint8Array(ab);
   }
   // 计算画笔是否在modifyRect上 
   calcIsOnModifyRect(x, y) {
