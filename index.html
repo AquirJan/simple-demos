@@ -261,10 +261,14 @@
     // sbBoardIns.setBackground({
     //   fillStyle: '#000'
     // })
-    sbBoardIns.setBackground({src:'./42.jpg'})
+    sbBoardIns.setBackground({src:'./42.jpg'}).then(res=>{
+      sbBoardIns.setDrawType('tycrect', true, {
+        label: 'df'
+      })
+    })
     // sbBoardIns.setExistBrushPic({src:'./pcb_brush.png'})
     // sbBoardIns.setExistAlgorithmPic({src:'./pcb_algorithm.png'})
-    sbBoardIns.setObserverMode();
+    // sbBoardIns.setObserverMode();
     workbenchDom.appendChild(sbBoardIns.getWrapDom())
     // document.body.appendChild(sbBoardIns.getWrapDom())
     
