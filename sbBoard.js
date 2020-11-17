@@ -541,7 +541,7 @@ export default class sbBoard {
         });
       }
       const image = new Image();
-      image.crossOrigin = 'Anonymous';
+      // image.crossOrigin = 'Anonymous';
       image.src = src;
       image.onload = () => {
         if (calcScaled) {
@@ -1033,7 +1033,7 @@ export default class sbBoard {
           }
         }
       } else {
-        this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle);
+        this.drawRect({x:this.hoverPoint.x, y:this.hoverPoint.y, label:options.label, strokeStyle:options.strokeStyle});
       }
     }
   }
@@ -1066,7 +1066,7 @@ export default class sbBoard {
       } else {
         // 新增标注框
 
-        let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle);
+        let someOneRect = this.drawRect({x:this.hoverPoint.x, y:this.hoverPoint.y, label:options.label, strokeStyle:options.strokeStyle});
         const _dx = someOneRect.x + someOneRect.width;
         if (someOneRect.x > _dx) {
           someOneRect.x = _dx;
@@ -1158,7 +1158,7 @@ export default class sbBoard {
         this.selectedDraw = null;
       }
       if (!this.hiddenDraws) {
-        const _onSomeOneRectFlag = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y);
+        const _onSomeOneRectFlag = this.calcIsOverDraw(this.hoverPoint.x, this.hoverPoint.y, false);
         document.documentElement.style.cursor = _onSomeOneRectFlag ? 'move' : 'crosshair';
         if (_onSomeOneRectFlag) {
           if (
@@ -1202,7 +1202,7 @@ export default class sbBoard {
           }
         }
       } else {
-        this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle);
+        this.drawRect({x: this.hoverPoint.x, y:this.hoverPoint.y, label: options.label, strokeStyle:options.strokeStyle, fillStyle: options.fillStyle});
       }
     }
   }
@@ -1232,7 +1232,7 @@ export default class sbBoard {
         this.selectedDraw['lock'] = true;
       }
     } else {
-      let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle);
+      let someOneRect = this.drawRect({x:this.hoverPoint.x, y:this.hoverPoint.y, label:options.label, strokeStyle:options.strokeStyle, fillStyle: options.fillStyle});
       const _dx = someOneRect.x + someOneRect.width;
       if (someOneRect.x > _dx) {
         someOneRect.x = _dx;
@@ -1456,7 +1456,7 @@ export default class sbBoard {
           }
         }
       } else {
-        this.drawRect(this.hoverPoint.x, this.hoverPoint.y);
+        this.drawRect({x:this.hoverPoint.x, y:this.hoverPoint.y});
         this.tmpRect['fillStyle'] = 'rgba(187, 224, 255, 0.4)';
         this.tmpRect['strokeStyle'] = 'transparent';
         this.tmpRect['type'] = 'select';
@@ -1566,7 +1566,7 @@ export default class sbBoard {
       y: e.offsetY
     };
     this.shouldRecord = true;
-    this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle);
+    this.drawRect({x:this.hoverPoint.x, y:this.hoverPoint.y, label:options.label, strokeStyle:options.strokeStyle});
   }
   rectUpFn(e, options) {
     if (!this.pencilPressing) {
@@ -1577,7 +1577,7 @@ export default class sbBoard {
       y: e.offsetY
     };
     this.pencilPressing = false;
-    let someOneRect = this.drawRect(this.hoverPoint.x, this.hoverPoint.y, options.label, options.strokeStyle);
+    let someOneRect = this.drawRect({x:this.hoverPoint.x, y:this.hoverPoint.y, label:options.label, strokeStyle:options.strokeStyle});
 
     const _dx = someOneRect.x + someOneRect.width;
     if (someOneRect.x > _dx) {
@@ -2312,7 +2312,10 @@ export default class sbBoard {
             ctx.strokeRect(val.x, val.y, val.width, val.height);
           }
         } else {
-          this.setCtxStyle(ctx, val.strokeStyle, val.lineWidth);
+          this.setCtxStyle(ctx, val.strokeStyle, val.lineWidth, val.fillStyle);
+          if (val.fillStyle) {
+            ctx.fillRect(val.x, val.y, val.width, val.height)
+          }
           ctx.strokeRect(val.x, val.y, val.width, val.height);
           if (val.label) {
             this.labelRect(val, this.zoomSize);
@@ -3053,7 +3056,7 @@ export default class sbBoard {
     return this.sbCtx.isPointInStroke(_tmpRect, x, y) || this.sbCtx.isPointInPath(_tmpRect, x, y);
   }
   // 计算鼠标落在哪个Draw上
-  calcIsOverDraw(x, y) {
+  calcIsOverDraw(x, y, isStroke=true) {
     let _flag = null;
     for (let i = 0; i < this.originDraws.length; i++) {
       const _item = this.originDraws[i];
@@ -3077,15 +3080,26 @@ export default class sbBoard {
           if (!_flag) {
             const _tmpRect = new Path2D();
             _tmpRect.rect(_item.x, _item.y, _item.width, _item.height);
-            // if(this.sbCtx.isPointInPath(_tmpRect, x, y)){ // 整个检测
-            if (this.sbCtx.isPointInStroke(_tmpRect, x, y)) {
-              // 边缘检测
-              _flag = {
-                data: _item,
-                index: i,
-                // pointIn: 'inside'
-                pointIn: 'stroke'
-              };
+            if (isStroke) {
+              if (this.sbCtx.isPointInStroke(_tmpRect, x, y)) {
+                // 边缘检测
+                _flag = {
+                  data: _item,
+                  index: i,
+                  // pointIn: 'inside'
+                  pointIn: 'stroke'
+                };
+              }
+            } else {
+              // 整个检测
+              if(this.sbCtx.isPointInPath(_tmpRect, x, y)){ 
+                _flag = {
+                  data: _item,
+                  index: i,
+                  // pointIn: 'inside'
+                  pointIn: 'stroke'
+                };
+              }
             }
           }
           break;
@@ -3302,8 +3316,8 @@ export default class sbBoard {
     this.tmpPolygon['closed'] = closed;
   }
   // 绘画矩形
-  drawRect(cx, cy, label, strokeStyle, zIndex = 1, gco = 'source-over') {
-    const _ds = this.getDeltaSize(cx, cy);
+  drawRect({x, y, label, strokeStyle, fillStyle, zIndex = 1, gco = 'source-over'}) {
+    const _ds = this.getDeltaSize(x, y);
     const _x = (this.pencilPosition.x - this.dragOffset.x) / this.zoomSize;
     const _y = (this.pencilPosition.y - this.dragOffset.y) / this.zoomSize;
     this.tmpRect = {
@@ -3315,7 +3329,8 @@ export default class sbBoard {
       gco: gco,
       zIndex,
       label,
-      strokeStyle
+      strokeStyle,
+      fillStyle
     };
     return this.tmpRect;
   }

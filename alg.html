@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+  <script>
+    function levenshtein(str1, str2) {
+      let matrix = [];
+      for (let i = 0; i < str2.length + 1; i++) {
+        matrix[i] = [];
+        for (let j = 0; j < str1.length + 1; j++) {
+          matrix[i][j] = i + j;
+        }
+      }
+
+      for (let i = 1; i < str2.length + 1; i++) {
+        for (let j = 1; j < str1.length + 1; j++) {
+          if (str1.substring(j - 1, j) == str2.substring(i - 1, i)) {
+            d = 0
+          }
+          else {
+            d = 1
+          }
+
+          matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + d);
+        }
+      }
+
+      return matrix[str2.length][str1.length];
+    }
+
+    function string_compare(full_str, label_str) {
+      full_str = full_str.replace(/\s+/g, "");
+      full_str = full_str.replace("-", "");
+      label_str = label_str.replace("-", "");
+      var l_length = label_str.length;
+
+      var min_distance = 1; //最小距离
+      for (var idx = 0; idx <= full_str.length - l_length; idx++) {
+        var ed = levenshtein(full_str.substring(idx, idx + l_length), label_str)
+        if (min_distance > ed / l_length) {
+          min_distance = ed / l_length;
+        }
+      }
+      return 1-min_distance;
+    }
+
+    // const _result = string_compare("「直众 切吧女小 门盖 按启动键。 关闭门盖, E3 请拔 火源, 洗衣结束后 未关 并 液 下电源线插头, 调平洗衣机或将桶内衣 日、 脱水 E4 品。 关闭水龙头。 物摆放均匀。 纠偏 毫松类 请每月清理一次进 小天鹅全国服务热线 400-8228-228 水阀滤网内的水垢 的衣物。 脏污。 排水管。", "400-8228-228");
+    // const _string = "耗能高 生产者名称 合肥美的洗衣机有限公司 1150M MB80- 规格型号: 0.098";
+    const _string = "按启动键。 关闭门盖 E日 等火源 请拔 洗衣结束后 未关 并 下电源线插头 平洗衣机或将桶内衣 脱水 爆物品 关闭水龙头。 E4 物摆放均匀。 水蓬松类 请每月清理 次进 小天鹅全国服务热线 起的衣物 水阀滤网内的水垢 228 8228 400- 脏污。 女下排水管"
+    const _result = string_compare(_string, "4008228228");
+    const _stringRe = _string.split(' ').reverse().join('');
+    const _resultRe = string_compare(_stringRe, "4008228228");
+    console.log(_result)
+    console.log(_stringRe)
+    console.log(_resultRe)
+  </script>
+</body>
+
+</html>
