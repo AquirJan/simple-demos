@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>calculate degree</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            display: grid;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #efefef;
+        }
+        .cube {
+            display: block;
+            position: absolute;
+            background-color: #453;
+            top: 100px;
+            left: 100px;
+            /* margin: -40px 0 0 -40px; */
+            width: 100px;
+            height: 100px;
+            /* transform: rotate(-130deg); */
+        }
+        .control {
+            display: block;
+            position: absolute;
+            background-color: #398;
+            width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            left: 50%;
+            margin-left: -10px;
+            /* top: -120px; */
+            top: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="cube" id="cube">
+        <span class="control" id="control"></span>
+    </div>
+    <script>
+        const _cube = document.getElementById('cube')
+        const _control = document.getElementById('control')
+        let _centerPoint = {
+            x: 0,
+            y: 0,
+        }
+        let _draging = false;
+        let _dragPoint = {
+            x: 0,
+            y: 0,
+        }
+        function calculatePointRelative(center, point){
+            const {x: cx, y: cy} = center;
+            const {x: px, y: py} = point;
+            const _relative = {
+                x: Math.floor(px-cx),
+                y: -Math.floor(py-cy),
+            }
+            return _relative
+        }
+        function calculateDegree(point) {
+            if (!point) {
+                console.warn('calculateDegree miss require params')
+            }
+            const {x, y} = point
+            let _angle = Math.atan2(y, x)  // 极坐标系
+            let _degree = _angle*(180/Math.PI);
+            _degree = -(_degree-90)
+            console.log(`_degree: ${_degree}`)
+            return _degree
+        }
+        function endPoint(e) {
+            if (_draging && _centerPoint) {
+                const _relativeStartPoint = calculatePointRelative(_centerPoint, {x: e.x, y: e.y})
+                const _degree = calculateDegree(_relativeStartPoint)
+                _cube.style.transform = `rotate(${_degree}deg)`
+            }
+            e.stopPropagation()
+            e.preventDefault()
+        }
+        _control && _control.addEventListener('mousedown', (e)=>{
+            const _cubeRect = _cube.getBoundingClientRect()
+            _centerPoint = {
+                x: Math.floor(_cubeRect.x)+Math.floor(_cubeRect.width/2),
+                y: Math.floor(_cubeRect.y)+Math.floor(_cubeRect.height/2),
+            }
+            const _relativeStartPoint = calculatePointRelative(_centerPoint, {x: e.x, y: e.y})
+            const _degree = calculateDegree(_relativeStartPoint)
+            _draging = true;
+            e.stopPropagation()
+            e.preventDefault()
+        })
+        document.body.addEventListener('mousemove', endPoint)
+        document.body.addEventListener('mouseup', ()=>{
+            _draging = false;
+        })
+        // document.body.addEventListener('mousedown', endPoint)
+    </script>
+</body>
+</html>

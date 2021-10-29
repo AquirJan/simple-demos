@@ -212,313 +212,320 @@
   </div>
   <script type="module">
     // new mousePosition()
-    import sbBoard from './sbBoard.js'
-    import usbCamera from './usbCamera.js'
+    // import sbBoard from './sbBoard.js'
+    // import usbCamera from './usbCamera.js'
 
-    const usbCameraIns = new usbCamera()
-    console.dir(usbCameraIns)
-    
-    let _historyRecordHandler = null;
-    const initData = [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":"adsfb"}]
-    
-    function bindEvent(btnId, cb) {
-      const restoreBtn = document.getElementById(btnId)
-      if (restoreBtn) {
-        restoreBtn.addEventListener('click', (e)=>{
-          cb()
-        })
-      }
-    }
-    function generatePop(x, y){
-      const pop = document.createElement('div')
-      pop.style.cssText = `width: 100px;height: 100px;position:fixed;top:${y}px;left:${x}px;z-index:100;background:darkslategray;`;
-      document.body.appendChild(pop)
-    }
-    let observer = false;
-    let handmove = false;
-    const workbenchDom = document.getElementById('workbench');
-    const sbBoardIns = new sbBoard({
-      // wrapStyle:{
-      //   // position: 'absolute',
-      // },
-      // pencilStyle: {
-      //   strokeStyle: 'red',
-      //   lineWidth: 3,
-      //   brushSize: 50,
-      //   brushColor: 'green'
-      // },
-      recordWithLabel: false,
-      // drawHistory: initData,
-      wrap:workbenchDom
-      // width: document.body.clientWidth,
-      // height: document.body.clientHeight
-    })
-
-    // sbBoardIns.setDrawType('brush', true, {
-    //   brushSize: 80
-    // })
-    // sbBoardIns.setDrawsData([{"x":2257,"y":1857,"ways":[{"x":2245,"y":1262},{"x":2536,"y":1274},{"x":2346,"y":1835}],"type":"polygon","closed":true,"id":"2de0-422e9f"},{"x":2819,"y":1224,"ways":[{"x":2819,"y":1224},{"x":3177,"y":1266},{"x":3046,"y":1532},{"x":2751,"y":1384}],"type":"polygon","closed":true,"id":"cc83-402782"},{"x":2278,"y":2781,"ways":[{"x":2278,"y":2781},{"x":2806,"y":2629},{"x":2388,"y":2165}],"type":"polygon","closed":true,"id":"bc23-4224a4"},{"x":1793,"y":1515,"ways":[{"x":1835,"y":1726},{"x":1996,"y":1713},{"x":2118,"y":1591},{"x":2084,"y":1430},{"x":1810,"y":1430}],"type":"polygon","closed":true,"id":"6dc5-4779bc"},{"x":3376,"y":2262,"ways":[{"x":3527,"y":2291},{"x":3456,"y":2397},{"x":3350,"y":2308}],"type":"polygon","closed":true,"id":"2649-4415b2"}])
-    // sbBoardIns.setBackground({
-    //   fillStyle: '#000'
-    // })
-    sbBoardIns.setBackground({src:'./42.jpg'}).then(res=>{
-      sbBoardIns.setDrawType('tycrect', true, {
-        label: 'df'
-      })
-    })
-    // sbBoardIns.setExistBrushPic({src:'./pcb_brush.png'})
-    // sbBoardIns.setExistAlgorithmPic({src:'./pcb_algorithm.png'})
-    // sbBoardIns.setObserverMode();
-    workbenchDom.appendChild(sbBoardIns.getWrapDom())
-    // document.body.appendChild(sbBoardIns.getWrapDom())
-    
-    // let scaled = false;
-    // const scaleBtn = document.getElementById('scale')
-    // scaleBtn.addEventListener('click', (e)=>{
-    //   ctx.clearRect(0, 0, canvasWrap.width, canvasWrap.height);
-    //   if (!scaled) {
-    //     ctx.scale(2, 2);
-    //   } else {
-    //     ctx.scale(0.5, 0.5);
-    //   }
-    //   scaled = !scaled
-    // })
-
-    // const restoreBtn = document.getElementById('restore')
-    // restoreBtn.addEventListener('click', (e)=>{
-    //   console.log('restore button')
-    // })
-
-    // bindEvent('clear', ()=>{
-    //   console.log('clear whole')
-    //   sbBoardIns.clearWhole()
-    // })
-    function loadingMask() {
-      const _mask = document.createElement('div')
-      _mask.innerText = 'Loading...';
-      _mask.style.cssText = 'top: 0;left: 0;width: 100%;height: 100%;z-index: 100;position:fixed;background-color: rgba(0,0,0,.5);color: #fff;display:flex;align-items:center;justify-content:center;'
-      return _mask
-    }
-    bindEvent('zoomIn', ()=>{
-      console.log('zoomIn')
-      sbBoardIns.zoomIn()
-    })
-    bindEvent('observer', ()=>{
-      console.log('observer')
-      observer = !observer
-      sbBoardIns.setObserverMode(observer);
-    })
-    bindEvent('zoomOut', ()=>{
-      console.log('zoomOut')
-      sbBoardIns.zoomOut()
-    })
-    bindEvent('zoomReset', ()=>{
-      console.log('zoomReset')
-      sbBoardIns.zoomReset()
-    })
-    bindEvent('onward', ()=>{
-      // console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
-      if (sbBoardIns.getHistoryRecordsLength()>0 && sbBoardIns.getRevokedStep() > 0) {
-        sbBoardIns.onward()
-      } else {
-        console.log('can not onward')
-      }
-    })
-    bindEvent('revoke', ()=>{
-      // console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
-      if (sbBoardIns.getHistoryRecordsLength() > 1 ) {
-        sbBoardIns.revoke()
-      } else {
-        console.log('can not revoke')
-      }
-    })
-    bindEvent('rect', ()=>{
-      console.log('rect')
-      sbBoardIns.setDrawType('rect')
-    })
-    bindEvent('tycrect', ()=>{
-      console.log('tycrect')
-      sbBoardIns.setDrawType('tycrect', true,  {
-        label: 'tycrectakjsdflkjasdkjflkajsdlkfjalikejfilasjdlkfdjflkajsdfljiejflsakdjflkasjdflkasjdf',
-        strokeStyle: 'red',
-        lineWidth: 3
-      })
-    })
-    bindEvent('pointer', ()=>{
-      console.log('pointer')
-      sbBoardIns.setDrawType('pointer')
-    })
-    bindEvent('polygon', ()=>{
-      console.log('polygon')
-      sbBoardIns.setDrawType('polygonfill', true, {
-        strokeStyle: 'rgba(0, 195, 255, 0.5)',
-        fillStyle: 'rgba(0, 195, 255, 0.5)',
-        gco: 'xor'
-      })
-    })
-    bindEvent('leiLineHorizontal', ()=>{
-      sbBoardIns.setDrawType('leiLine', true, {
-        strokeStyle: 'rgba(25, 255, 35, 1)',
-        lineWidth: 5,
-        cParams: {
-          direction: 'horizontal'
-        }
-      })
-    })
-    bindEvent('leiLineHorizontalHidden', ()=>{
-      sbBoardIns.setDrawType('leiLine', true, {
-        strokeStyle: 'rgba(25, 255, 35, 1)',
-        lineWidth: 5,
-        cParams: {
-          direction: 'horizontal-hidden'
-        }
-      })
-    })
-    bindEvent('leiLineVertical', ()=>{
-      sbBoardIns.setDrawType('leiLine', true, {
-        strokeStyle: 'rgba(25, 255, 35, 1)',
-        lineWidth: 5,
-        cParams: {
-          direction: 'vertical'
-        }
-      })
-    })
-    bindEvent('leiLineVerticalHidden', ()=>{
-      sbBoardIns.setDrawType('leiLine', true, {
-        strokeStyle: 'rgba(25, 255, 35, 1)',
-        lineWidth: 5,
-        cParams: {
-          direction: 'vertical-hidden'
-        }
-      })
-    })
-    bindEvent('brush', ()=>{
-      console.log('brush')
-      sbBoardIns.setDrawType('brush', true, {
-        brushSize: 50
-      })
-    })
-    bindEvent('clipsection', async ()=>{
-      console.log('clipsection')
-      const mask = loadingMask()
-      document.body.appendChild(mask)
-      setTimeout(async ()=>{
-        const imgb64 = await sbBoardIns.clipImgSection({
-          x: 0,
-          y: 0,
-          width: 2000,
-          height: 2000,
-        })
-        if (imgb64) {
-          previewExportImg([imgb64])
-        }
-        mask.remove()
-      }, 100)
-    })
-    // bindEvent('circle', ()=>{
-    //   console.log('circle')
-    //   sbBoardIns.setDrawType('circle')
-    // })
-    bindEvent('pcbBig', ()=>{
-      console.log('pcbBig')
-      sbBoardIns.clearWhole()
-      sbBoardIns.setBackground({src:'./pcb_demo.jpg'})
-      sbBoardIns.reinitRecordHistory([{"x":1558,"y":542,"width":1652,"height":656,"type":"rect"},{"x":2024,"y":2224,"ways":[{"x":2944,"y":2571},{"x":2911,"y":1621},{"x":2232,"y":1399},{"x":1855,"y":1434},{"x":1449,"y":1404}],"type":"polygon","closed":true,"width":0,"height":0}])
-      sbBoardIns.setDrawsData([{"x":1558,"y":542,"width":1652,"height":656,"type":"rect"},{"x":2024,"y":2224,"ways":[{"x":2944,"y":2571},{"x":2911,"y":1621},{"x":2232,"y":1399},{"x":1855,"y":1434},{"x":1449,"y":1404}],"type":"polygon","closed":true,"width":0,"height":0}], false)
-      sbBoardIns.zoomReset()
-    })
-    bindEvent('pcbSmall', ()=>{
-      console.log('pcbSmall')
-      sbBoardIns.clearWhole()
-      sbBoardIns.setBackground({src:'./pcb_small.png'})
-      sbBoardIns.reinitRecordHistory([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"},{"x":193,"y":397,"ways":[{"x":149,"y":271},{"x":358,"y":222},{"x":307,"y":362},{"x":260,"y":349}],"type":"polygon","closed":true}])
-      sbBoardIns.setDrawsData([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"},{"x":193,"y":397,"ways":[{"x":149,"y":271},{"x":358,"y":222},{"x":307,"y":362},{"x":260,"y":349}],"type":"polygon","closed":true}], false)
-      sbBoardIns.zoomReset()
-    })
-    bindEvent('getData', ()=>{
-      console.log('getData')
-      console.log(JSON.stringify(sbBoardIns.exportDrawsData())) 
-    })
-    bindEvent('eraser', ()=>{
-      console.log('eraser')
-      sbBoardIns.setDrawType('eraser', true, {
-        eraserSize: 50
-      })
-    })
-    bindEvent('handmove', ()=>{
-      console.log('handmove')
-      handmove = !handmove
-      sbBoardIns.setHandMove(handmove)
-    })
-    bindEvent('exportImage', ()=>{
-      const mask = loadingMask()
-      document.body.appendChild(mask)
-      setTimeout(async ()=>{
-        const b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'vertical'})
-        const brush_b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'vertical-hidden'})
-        const fusion_b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'horizontal'})
-        const origin_b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'horizontal-hidden'})
-
-        // const b64 = await sbBoardIns.exportPic({type: 'algorithm', file:false})
-        // const brush_b64 = await sbBoardIns.exportPic({type: 'draws', file:false})
-        // const fusion_b64 = await sbBoardIns.exportPic({type: 'fusion', file:false})
-        // const origin_b64 = await sbBoardIns.exportPic({type: 'origin', file:false})
-        if (b64 && brush_b64 && fusion_b64 && origin_b64) {
-          previewExportImg([b64, brush_b64, fusion_b64, origin_b64])
-        }
-        mask.remove()
-      }, 100)
-    })
-    function previewExportImg(b64Array) {
-      return new Promise(resolve => {
-        const previewWrap = document.createElement('div')
-        previewWrap.classList.add('preview')
-        b64Array.forEach(val=>{
-          const img = new Image()
-          img.src=val
-          img.style.cssText="display:block;width:50%"
-          previewWrap.appendChild(img)
-          previewWrap.addEventListener('click', ()=>{
-            previewWrap.remove()
-          })
-        })
-        document.body.appendChild(previewWrap)
-        resolve(true)
-      })
-    }
-    function sortArrayObject() {
-      const _array = [
-        {camIndex:1},
-        {camIndex:33},
-        {camIndex:32},
-        {camIndex:0},
-      ]
-      const _tarray = _array.sort((a, b)=>{
-        const _aIndex = a.camIndex
-        const _bIndex = b.camIndex
-        if (_aIndex < _bIndex) {
-          return -1;
-        } else if (_aIndex > _bIndex) {
-          return 1;
-        } else {
-          return 0
-        }
-      })
-      console.log(_tarray)
-    }
-    // const canvas = document.getElementById('canvas')
-    // const image = new Image();
-    // image.src = './pcb_demo.jpg';
-    // image.onload = () => {
-    //   canvas.width = image.naturalWidth
-    //   canvas.height = image.naturalHeight
-    //   canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
+    // Date.prototype.format = function (fmt) { //author: meizz 
+    //   var o = {
+    //       "M+": this.getMonth() + 1, //月份 
+    //       "d+": this.getDate(), //日 
+    //       "h+": this.getHours(), //小时 
+    //       "m+": this.getMinutes(), //分 
+    //       "s+": this.getSeconds(), //秒 
+    //       "q+": Math.floor((this.getMonth() + 3) / 3), //季度 
+    //       "S": this.getMilliseconds() //毫秒 
+    //   };
+    //   if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+    //   for (var k in o)
+    //   if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+    //   return fmt;
     // }
 
-    // let aaa = [{"dx":907.2,"dy":452.4,"height":118.8,"id":"c43ae412-7580-482a-bcfc-f6be9121145d","type":"rect","width":168,"x":739.2,"y":333.6,"selected":false}]
-    // const bbb = aaa.slice(0, aaa.length) 
-    // bbb[0].dx = 0
-    // console.log(aaa, bbb)
+    // const usbCameraIns = new usbCamera()
+    // console.dir(usbCameraIns)
+    
+    // let _historyRecordHandler = null;
+    // const initData = [{"x":1816,"y":1122,"width":200,"height":192,"type":"rect","strokeStyle":"gray","lineWidth":6,"label":"adsfb"}]
+    
+    // function bindEvent(btnId, cb) {
+    //   const restoreBtn = document.getElementById(btnId)
+    //   if (restoreBtn) {
+    //     restoreBtn.addEventListener('click', (e)=>{
+    //       cb()
+    //     })
+    //   }
+    // }
+    // function generatePop(x, y){
+    //   const pop = document.createElement('div')
+    //   pop.style.cssText = `width: 100px;height: 100px;position:fixed;top:${y}px;left:${x}px;z-index:100;background:darkslategray;`;
+    //   document.body.appendChild(pop)
+    // }
+    // let observer = false;
+    // let handmove = false;
+    // const workbenchDom = document.getElementById('workbench');
+    // const sbBoardIns = new sbBoard({
+    //   // wrapStyle:{
+    //   //   // position: 'absolute',
+    //   // },
+    //   // pencilStyle: {
+    //   //   strokeStyle: 'red',
+    //   //   lineWidth: 3,
+    //   //   brushSize: 50,
+    //   //   brushColor: 'green'
+    //   // },
+    //   recordWithLabel: false,
+    //   // drawHistory: initData,
+    //   wrap:workbenchDom
+    //   // width: document.body.clientWidth,
+    //   // height: document.body.clientHeight
+    // })
+
+    // // sbBoardIns.setDrawType('brush', true, {
+    // //   brushSize: 80
+    // // })
+    // // sbBoardIns.setDrawsData([{"x":2257,"y":1857,"ways":[{"x":2245,"y":1262},{"x":2536,"y":1274},{"x":2346,"y":1835}],"type":"polygon","closed":true,"id":"2de0-422e9f"},{"x":2819,"y":1224,"ways":[{"x":2819,"y":1224},{"x":3177,"y":1266},{"x":3046,"y":1532},{"x":2751,"y":1384}],"type":"polygon","closed":true,"id":"cc83-402782"},{"x":2278,"y":2781,"ways":[{"x":2278,"y":2781},{"x":2806,"y":2629},{"x":2388,"y":2165}],"type":"polygon","closed":true,"id":"bc23-4224a4"},{"x":1793,"y":1515,"ways":[{"x":1835,"y":1726},{"x":1996,"y":1713},{"x":2118,"y":1591},{"x":2084,"y":1430},{"x":1810,"y":1430}],"type":"polygon","closed":true,"id":"6dc5-4779bc"},{"x":3376,"y":2262,"ways":[{"x":3527,"y":2291},{"x":3456,"y":2397},{"x":3350,"y":2308}],"type":"polygon","closed":true,"id":"2649-4415b2"}])
+    // // sbBoardIns.setBackground({
+    // //   fillStyle: '#000'
+    // // })
+    // sbBoardIns.setBackground({src:'./42.jpg'}).then(res=>{
+    //   sbBoardIns.setDrawType('tycrect', true, {
+    //     label: 'df'
+    //   })
+    // })
+    // // sbBoardIns.setExistBrushPic({src:'./pcb_brush.png'})
+    // // sbBoardIns.setExistAlgorithmPic({src:'./pcb_algorithm.png'})
+    // // sbBoardIns.setObserverMode();
+    // workbenchDom.appendChild(sbBoardIns.getWrapDom())
+    // // document.body.appendChild(sbBoardIns.getWrapDom())
+    
+    // // let scaled = false;
+    // // const scaleBtn = document.getElementById('scale')
+    // // scaleBtn.addEventListener('click', (e)=>{
+    // //   ctx.clearRect(0, 0, canvasWrap.width, canvasWrap.height);
+    // //   if (!scaled) {
+    // //     ctx.scale(2, 2);
+    // //   } else {
+    // //     ctx.scale(0.5, 0.5);
+    // //   }
+    // //   scaled = !scaled
+    // // })
+
+    // // const restoreBtn = document.getElementById('restore')
+    // // restoreBtn.addEventListener('click', (e)=>{
+    // //   console.log('restore button')
+    // // })
+
+    // // bindEvent('clear', ()=>{
+    // //   console.log('clear whole')
+    // //   sbBoardIns.clearWhole()
+    // // })
+    // function loadingMask() {
+    //   const _mask = document.createElement('div')
+    //   _mask.innerText = 'Loading...';
+    //   _mask.style.cssText = 'top: 0;left: 0;width: 100%;height: 100%;z-index: 100;position:fixed;background-color: rgba(0,0,0,.5);color: #fff;display:flex;align-items:center;justify-content:center;'
+    //   return _mask
+    // }
+    // bindEvent('zoomIn', ()=>{
+    //   console.log('zoomIn')
+    //   sbBoardIns.zoomIn()
+    // })
+    // bindEvent('observer', ()=>{
+    //   console.log('observer')
+    //   observer = !observer
+    //   sbBoardIns.setObserverMode(observer);
+    // })
+    // bindEvent('zoomOut', ()=>{
+    //   console.log('zoomOut')
+    //   sbBoardIns.zoomOut()
+    // })
+    // bindEvent('zoomReset', ()=>{
+    //   console.log('zoomReset')
+    //   sbBoardIns.zoomReset()
+    // })
+    // bindEvent('onward', ()=>{
+    //   // console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
+    //   if (sbBoardIns.getHistoryRecordsLength()>0 && sbBoardIns.getRevokedStep() > 0) {
+    //     sbBoardIns.onward()
+    //   } else {
+    //     console.log('can not onward')
+    //   }
+    // })
+    // bindEvent('revoke', ()=>{
+    //   // console.log(sbBoardIns.getHistoryRecordsLength(), sbBoardIns.getRevokedStep())
+    //   if (sbBoardIns.getHistoryRecordsLength() > 1 ) {
+    //     sbBoardIns.revoke()
+    //   } else {
+    //     console.log('can not revoke')
+    //   }
+    // })
+    // bindEvent('rect', ()=>{
+    //   console.log('rect')
+    //   sbBoardIns.setDrawType('rect')
+    // })
+    // bindEvent('tycrect', ()=>{
+    //   console.log('tycrect')
+    //   sbBoardIns.setDrawType('tycrect', true,  {
+    //     label: 'tycrectakjsdflkjasdkjflkajsdlkfjalikejfilasjdlkfdjflkajsdfljiejflsakdjflkasjdflkasjdf',
+    //     strokeStyle: 'red',
+    //     lineWidth: 3
+    //   })
+    // })
+    // bindEvent('pointer', ()=>{
+    //   console.log('pointer')
+    //   sbBoardIns.setDrawType('pointer')
+    // })
+    // bindEvent('polygon', ()=>{
+    //   console.log('polygon')
+    //   sbBoardIns.setDrawType('polygonfill', true, {
+    //     strokeStyle: 'rgba(0, 195, 255, 0.5)',
+    //     fillStyle: 'rgba(0, 195, 255, 0.5)',
+    //     gco: 'xor'
+    //   })
+    // })
+    // bindEvent('leiLineHorizontal', ()=>{
+    //   sbBoardIns.setDrawType('leiLine', true, {
+    //     strokeStyle: 'rgba(25, 255, 35, 1)',
+    //     lineWidth: 5,
+    //     cParams: {
+    //       direction: 'horizontal'
+    //     }
+    //   })
+    // })
+    // bindEvent('leiLineHorizontalHidden', ()=>{
+    //   sbBoardIns.setDrawType('leiLine', true, {
+    //     strokeStyle: 'rgba(25, 255, 35, 1)',
+    //     lineWidth: 5,
+    //     cParams: {
+    //       direction: 'horizontal-hidden'
+    //     }
+    //   })
+    // })
+    // bindEvent('leiLineVertical', ()=>{
+    //   sbBoardIns.setDrawType('leiLine', true, {
+    //     strokeStyle: 'rgba(25, 255, 35, 1)',
+    //     lineWidth: 5,
+    //     cParams: {
+    //       direction: 'vertical'
+    //     }
+    //   })
+    // })
+    // bindEvent('leiLineVerticalHidden', ()=>{
+    //   sbBoardIns.setDrawType('leiLine', true, {
+    //     strokeStyle: 'rgba(25, 255, 35, 1)',
+    //     lineWidth: 5,
+    //     cParams: {
+    //       direction: 'vertical-hidden'
+    //     }
+    //   })
+    // })
+    // bindEvent('brush', ()=>{
+    //   console.log('brush')
+    //   sbBoardIns.setDrawType('brush', true, {
+    //     brushSize: 50
+    //   })
+    // })
+    // bindEvent('clipsection', async ()=>{
+    //   console.log('clipsection')
+    //   const mask = loadingMask()
+    //   document.body.appendChild(mask)
+    //   setTimeout(async ()=>{
+    //     const imgb64 = await sbBoardIns.clipImgSection({
+    //       x: 0,
+    //       y: 0,
+    //       width: 2000,
+    //       height: 2000,
+    //     })
+    //     if (imgb64) {
+    //       previewExportImg([imgb64])
+    //     }
+    //     mask.remove()
+    //   }, 100)
+    // })
+    // // bindEvent('circle', ()=>{
+    // //   console.log('circle')
+    // //   sbBoardIns.setDrawType('circle')
+    // // })
+    // bindEvent('pcbBig', ()=>{
+    //   console.log('pcbBig')
+    //   sbBoardIns.clearWhole()
+    //   sbBoardIns.setBackground({src:'./pcb_demo.jpg'})
+    //   sbBoardIns.reinitRecordHistory([{"x":1558,"y":542,"width":1652,"height":656,"type":"rect"},{"x":2024,"y":2224,"ways":[{"x":2944,"y":2571},{"x":2911,"y":1621},{"x":2232,"y":1399},{"x":1855,"y":1434},{"x":1449,"y":1404}],"type":"polygon","closed":true,"width":0,"height":0}])
+    //   sbBoardIns.setDrawsData([{"x":1558,"y":542,"width":1652,"height":656,"type":"rect"},{"x":2024,"y":2224,"ways":[{"x":2944,"y":2571},{"x":2911,"y":1621},{"x":2232,"y":1399},{"x":1855,"y":1434},{"x":1449,"y":1404}],"type":"polygon","closed":true,"width":0,"height":0}], false)
+    //   sbBoardIns.zoomReset()
+    // })
+    // bindEvent('pcbSmall', ()=>{
+    //   console.log('pcbSmall')
+    //   sbBoardIns.clearWhole()
+    //   sbBoardIns.setBackground({src:'./pcb_small.png'})
+    //   sbBoardIns.reinitRecordHistory([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"},{"x":193,"y":397,"ways":[{"x":149,"y":271},{"x":358,"y":222},{"x":307,"y":362},{"x":260,"y":349}],"type":"polygon","closed":true}])
+    //   sbBoardIns.setDrawsData([{"x":374,"y":380,"width":57,"height":64,"type":"rect","id":"5d0ae6e9-d18b-4973-a071-7eca7761652c"},{"x":193,"y":397,"ways":[{"x":149,"y":271},{"x":358,"y":222},{"x":307,"y":362},{"x":260,"y":349}],"type":"polygon","closed":true}], false)
+    //   sbBoardIns.zoomReset()
+    // })
+    // bindEvent('getData', ()=>{
+    //   console.log('getData')
+    //   console.log(JSON.stringify(sbBoardIns.exportDrawsData())) 
+    // })
+    // bindEvent('eraser', ()=>{
+    //   console.log('eraser')
+    //   sbBoardIns.setDrawType('eraser', true, {
+    //     eraserSize: 50
+    //   })
+    // })
+    // bindEvent('handmove', ()=>{
+    //   console.log('handmove')
+    //   handmove = !handmove
+    //   sbBoardIns.setHandMove(handmove)
+    // })
+    // bindEvent('exportImage', ()=>{
+    //   const mask = loadingMask()
+    //   document.body.appendChild(mask)
+    //   setTimeout(async ()=>{
+    //     const b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'vertical'})
+    //     const brush_b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'vertical-hidden'})
+    //     const fusion_b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'horizontal'})
+    //     const origin_b64 = await sbBoardIns.exportPic({type: 'leiLine-algorithm', file:false, leiLineDirection: 'horizontal-hidden'})
+
+    //     // const b64 = await sbBoardIns.exportPic({type: 'algorithm', file:false})
+    //     // const brush_b64 = await sbBoardIns.exportPic({type: 'draws', file:false})
+    //     // const fusion_b64 = await sbBoardIns.exportPic({type: 'fusion', file:false})
+    //     // const origin_b64 = await sbBoardIns.exportPic({type: 'origin', file:false})
+    //     if (b64 && brush_b64 && fusion_b64 && origin_b64) {
+    //       previewExportImg([b64, brush_b64, fusion_b64, origin_b64])
+    //     }
+    //     mask.remove()
+    //   }, 100)
+    // })
+    // function previewExportImg(b64Array) {
+    //   return new Promise(resolve => {
+    //     const previewWrap = document.createElement('div')
+    //     previewWrap.classList.add('preview')
+    //     b64Array.forEach(val=>{
+    //       const img = new Image()
+    //       img.src=val
+    //       img.style.cssText="display:block;width:50%"
+    //       previewWrap.appendChild(img)
+    //       previewWrap.addEventListener('click', ()=>{
+    //         previewWrap.remove()
+    //       })
+    //     })
+    //     document.body.appendChild(previewWrap)
+    //     resolve(true)
+    //   })
+    // }
+    // function sortArrayObject() {
+    //   const _array = [
+    //     {camIndex:1},
+    //     {camIndex:33},
+    //     {camIndex:32},
+    //     {camIndex:0},
+    //   ]
+    //   const _tarray = _array.sort((a, b)=>{
+    //     const _aIndex = a.camIndex
+    //     const _bIndex = b.camIndex
+    //     if (_aIndex < _bIndex) {
+    //       return -1;
+    //     } else if (_aIndex > _bIndex) {
+    //       return 1;
+    //     } else {
+    //       return 0
+    //     }
+    //   })
+    //   console.log(_tarray)
+    // }
+
+    let abc = "origin/NG\\2020-12-22\front/cam_front_20201222_171350_313381324790C185K00427.jpg".split(/\/|\\\\|\\/gi)
+    abc = abc.pop()
+    console.log(abc)
   </script>
 </body>
 </html>
