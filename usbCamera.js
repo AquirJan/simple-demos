@@ -1,7 +1,7 @@
 export default class usbCamera {
     constructor(options={}){
         this.options = Object.assign({
-            midea:{
+            media:{
                 audio: false,
                 video: true,
                 // video: {
@@ -18,7 +18,7 @@ export default class usbCamera {
     }
     getCameraList() {
         return new Promise(resolve => {
-            navigator.mediaDevices.getUserMedia(this.options.midea).then(mediaStream => {
+            navigator.mediaDevices.getUserMedia(this.options.media).then(mediaStream => {
                 const track = mediaStream.getVideoTracks()[this.options.camIndex];
                 this.imageCaptureIns = new ImageCapture(track);
                 resolve({
